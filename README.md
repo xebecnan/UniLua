@@ -8,6 +8,8 @@ Being used in commercial MMORPG game development.
 
 Open Assets\Stages\GameMain.unity and run it.
 
+You can use WSAD keys to control the icon in this sample project.
+
 ## Original Libraries Status ##
 
 *   Base lib: done
