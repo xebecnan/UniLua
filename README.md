@@ -10,7 +10,7 @@ Open Assets\Stages\GameMain.unity and run it.
 
 You can use WSAD keys to control the icon in this sample project.
 
-## Original Libraries Status ##
+## Libraries ##
 
 *   Base lib: done
 *   Package lib: done
@@ -21,7 +21,7 @@ You can use WSAD keys to control the icon in this sample project.
 *   String lib: partially implemented
 *   Debug lib: partially implemented
 
-## Additional Libraries Status ##
+## Additional Libraries ##
 
 *   FFI lib: basicly done
 *   Encoding lib: support convert between UTF-8 and UTF-16(C# builtin)
