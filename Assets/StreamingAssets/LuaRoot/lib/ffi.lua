@@ -7,9 +7,21 @@ local CONVERT_FROM  = "_ConvertFrom"
 ----------------------------------------------------------------------
 
 local type_alias = {
-    float   = "Single",
-    string  = "String",
     bool    = "Boolean",
+    char    = "Char",
+    byte    = "Byte",
+    sbyte   = "SByte",
+    short   = "Int16",
+    ushort  = "UInt16",
+    int     = "Int32",
+    uint    = "UInt32",
+    long    = "Int64",
+    ulong   = "UInt64",
+    float   = "Single",
+    double  = "Double",
+    decimal = "Decimal",
+    string  = "String",
+    object  = "Object",
 }
 local function get_type(typename)
     return cs.get_type(type_alias[typename] or typename)
@@ -90,6 +102,11 @@ local function property(self, signature)
     return self
 end
 
+local function static_property(self, signature)
+    table.insert(self.__static_properties, signature)
+    return self
+end
+
 ----------------------------------------------------------------------
 
 local function new_class_mgr()
@@ -97,7 +114,9 @@ local function new_class_mgr()
 
     local function declare_class(clsname)
         all_classes[clsname] = {
-            cls = {},
+            -- cls = {},
+            cls_methods  = {},
+            cls_fields   = {},
             inst_methods = {},
             inst_fields  = {},
         }
@@ -109,7 +128,9 @@ local function new_class_mgr()
 
     local function define_class(clsname)
         local clsinfo = all_classes[clsname]
-        local cls           = clsinfo.cls
+        -- local cls           = clsinfo.cls
+        local cls_methods   = clsinfo.cls_methods
+        local cls_fields    = clsinfo.cls_fields
         local inst_methods  = clsinfo.inst_methods
         local inst_fields   = clsinfo.inst_fields
 
@@ -122,7 +143,12 @@ local function new_class_mgr()
         end
     
         local function add_class_method(name, mtd)
-            cls[name] = mtd
+            -- cls[name] = mtd
+            cls_methods[name] = mtd
+        end
+
+        local function add_class_field(field_name, index, newindex)
+            cls_fields[field_name] = {index, newindex}
         end
 
         local mt = {
@@ -130,6 +156,7 @@ local function new_class_mgr()
                 add_inst_method = add_inst_method,
                 add_inst_field  = add_inst_field,
                 add_class_method = add_class_method,
+                add_class_field  = add_class_field,
             },
         }
         return setmetatable({}, mt)
@@ -137,10 +164,22 @@ local function new_class_mgr()
 
     local function make_class(clsname)
         local clsinfo = all_classes[clsname]
-        local cls = clsinfo.cls
+        -- local cls = clsinfo.cls
+        local cls_methods = clsinfo.cls_methods
+        local cls_fields = clsinfo.cls_fields
         local cls_mt = {
-            __index = cls,
+            __index = function(self, key)
+                if cls_fields[key] then
+                    return cls_fields[key][1](self, key)
+                elseif cls_methods[key] then
+                    return cls_methods[key]
+                end
+            end,
+            -- __index = cls,
             __newindex = function(self, key, value)
+                if cls_fields[key] then
+                    return cls_fields[key][2](self, key, value)
+                end
             end,
         }
         return setmetatable({}, cls_mt)
@@ -204,7 +243,7 @@ local function build_class(cls_mgr, self)
         end
     end
 
-    local type_info = get_type(clsname)
+    local type_info = assert(get_type(clsname), clsname)
 
     def.add_class_method(TYPE_ACCESS, function() return type_info end)
 
@@ -220,6 +259,7 @@ local function build_class(cls_mgr, self)
         local func_sig = parse_signature(signature)
         assert(func_sig.fname == clsname)
         local con_info = cs.get_constructor(type_info, func_sig.partypes)
+        assert(con_info, func_sig.fname)
         def.add_class_method(CONSTRUCTOR, function(...)
             local this = cs.call_method(con_info, nil, ...)
             return cls_mgr.make_instance(clsname, this)
@@ -233,6 +273,7 @@ local function build_class(cls_mgr, self)
         local func_sig = parse_signature(signature)
         local mtd_info = cs.get_method(type_info, func_sig.fname,
             func_sig.partypes)
+        assert(mtd_info, func_sig.fname)
         def.add_inst_method(func_sig.fname, function(self, ...)
             local this = rawget(self, "__this")
             return wrap_retval( cs.call_method(mtd_info, this, ...),
@@ -247,10 +288,14 @@ local function build_class(cls_mgr, self)
         local func_sig = parse_signature(signature)
         local mtd_info = cs.get_static_method(type_info, func_sig.fname,
             func_sig.partypes)
+        assert(mtd_info, func_sig.fname)
         def.add_class_method(func_sig.fname, function(...)
             -- print("call static method:", func_sig.fname)
-            return wrap_retval( cs.call_method(mtd_info, nil, ...),
-                func_sig.ret_typename )
+            local ok, val = pcall( cs.call_method, mtd_info, nil, ...)
+            if not ok then
+                error("call static method("..func_sig.fname..") error: "..val)
+            end
+            return wrap_retval( val, func_sig.ret_typename )
         end)
     end
 
@@ -260,6 +305,7 @@ local function build_class(cls_mgr, self)
     for _, signature in ipairs(self.__fields) do
         local sig = parse_signature(signature)
         local field_info = cs.get_field(type_info, sig.fname)
+        assert(field_info, sig.fname)
         local field_type = get_type(sig.ret_typename)
         local function index(self, key)
             local this = rawget(self, "__this")
@@ -281,6 +327,7 @@ local function build_class(cls_mgr, self)
     for _, signature in ipairs(self.__properties) do
         local sig = parse_signature(signature)
         local prop_info = cs.get_prop(type_info, sig.fname)
+        assert(prop_info, sig.fname)
         local prop_type = get_type(sig.ret_typename)
         local function index(self, key)
             local this = rawget(self, "__this")
@@ -296,6 +343,25 @@ local function build_class(cls_mgr, self)
         def.add_inst_field(sig.fname, index, newindex)
     end
 
+    ----------------
+    -- STATIC PROPERTIES
+    ----------------
+    for _, signature in ipairs(self.__static_properties) do
+        local sig = parse_signature(signature)
+        local prop_info = cs.get_static_prop(type_info, sig.fname)
+        assert(prop_info, sig.fname)
+        local prop_type = get_type(sig.ret_typename)
+        local function index(self, key)
+            return wrap_retval( cs.get_prop_value(prop_info, nil,
+                prop_type), sig.ret_typename )
+        end
+        local function newindex(self, key, value)
+            local raw_value = unwrap_param(value, sig.ret_typename)
+            cs.set_prop_value(prop_info, nil, raw_value, prop_type)
+        end
+        def.add_class_field(sig.fname, index, newindex)
+    end
+
     return cls_mgr.make_class(clsname)
 end
 
@@ -306,6 +372,7 @@ local class_mt = {
         static_method   = static_method,
         field           = field,
         property        = property,
+        static_property = static_property,
     },
 }
 
@@ -329,6 +396,7 @@ local function class(builder, clsname)
         __static_methods = {},
         __fields = {},
         __properties = {},
+        __static_properties = {},
     }
     local obj = setmetatable(inst, class_mt)
     builder.class_list[clsname] = obj
