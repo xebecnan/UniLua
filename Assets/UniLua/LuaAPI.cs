@@ -1425,7 +1425,7 @@ namespace UniLua
 				LuaCSharpClosure ccl = ci.Func.Value as LuaCSharpClosure;
 				if( ccl != null && (index <= ccl.Upvals.Count) )
 				{
-					addr = new StkId( ccl.Upvals[index-1] );
+					addr = new StkId( ccl.Upvals, index - 1 );
 					return true;
 				}
 				else
