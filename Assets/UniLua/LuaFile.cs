@@ -2,25 +2,20 @@
 using System.IO;
 using System.Collections.Generic;
 
-using UnityEngine;
-
 namespace UniLua
 {
 	internal class LuaFile
 	{
-		private static readonly string LUA_ROOT = Application.dataPath + "/StreamingAssets/LuaRoot/";
-
-		public static FileLoadInfo OpenFile( string filename )
+		public static FileLoadInfo OpenFile( string filePath )
 		{
-			var path = LUA_ROOT + filename;
-			return new FileLoadInfo( File.Open( path, FileMode.Open ) );
+            return new FileLoadInfo(File.Open(filePath, FileMode.Open));
 		}
 
-		public static bool Readable( string filename )
+        public static bool Readable(string filePath)
 		{
-			var path = LUA_ROOT + filename;
 			try {
-				using( var stream = File.Open( path, FileMode.Open ) ) {
+                using (var stream = File.Open(filePath, FileMode.Open))
+                {
 					return true;
 				}
 			}
