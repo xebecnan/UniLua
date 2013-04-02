@@ -57,7 +57,7 @@ namespace UniLua
 			if( assembly != null )
 				AssemblyList.Add( assembly );
 			else
-				UnityEngine.Debug.LogError("assembly not found:" + name);
+				Tools.Debug.LogError("assembly not found:" + name);
 			return 0;
 		}
 

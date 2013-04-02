@@ -1,23 +1,24 @@
 ﻿
 //#define UNITY
 
+using System;
+
 namespace UniLua.Tools
 {
-	internal class Debug
-	{
-		public static void Log( string msg )
-		{
-#if UNITY
-			UnityEngine.Debug.Log( msg );
-#endif
-		}
+    public class Debug
+    {
+        public static Action<string> Log = NoAction;
+        public static Action<string> LogError = NoAction;
 
-		public static void LogError( string msg )
-		{
-#if UNITY
-			UnityEngine.Debug.LogError( msg );
-#endif
-		}
+        private static void NoAction(string msg) { }
+
+        static Debug()
+        {
+            #if UNITY
+			    LogAction = UnityEngine.Debug.Log;
+                LogError = UnityEngine.Debug.LogError;
+            #endif
+        }
 	}
 }
 
