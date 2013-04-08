@@ -23,6 +23,7 @@ namespace UniLua
 	{
 		void 	L_Where( int level );
 		int 	L_Error( string fmt, params object[] args );
+		void	L_CheckStack( int size, string msg );
 		void 	L_CheckAny( int narg );
 		void 	L_CheckType( int index, LuaType t );
 		double	L_CheckNumber( int narg );
@@ -149,6 +150,17 @@ namespace UniLua
 			API.PushString( string.Format( fmt, args ) );
 			API.Concat( 2 );
 			return API.Error();
+		}
+
+		public void L_CheckStack( int size, string msg )
+		{
+			// keep some extra space to run error routines, if needed
+			if(!API.CheckStack(size + LuaDef.LUA_MINSTACK)) {
+				if(msg != null)
+					{ L_Error(string.Format("stack overflow ({0})", msg)); }
+				else
+					{ L_Error("stack overflow"); }
+			}
 		}
 
 		public void L_CheckAny( int narg )
@@ -445,14 +457,8 @@ namespace UniLua
 					loadinfo.SkipComment();
 					status = API.Load( loadinfo, API.ToString(-1), mode );
 				}
-				// using( var stream = File.Open( filename, FileMode.Open ) )
-				// {
-				// 	var loadinfo = new FileLoadInfo( stream );
-				// 	loadinfo.SkipComment();
-				// 	status = API.Load( loadinfo, API.ToString(-1), mode );
-				// }
 			}
-			catch( Exception e )
+			catch( LuaRuntimeException e )
 			{
 				API.PushString( string.Format( "cannot open {0}: {1}",
 					filename, e.Message ) );
@@ -610,6 +616,7 @@ namespace UniLua
 		public void L_SetFuncs( NameFuncPair[] define, int nup )
 		{
 			// TODO: Check Version
+			L_CheckStack(nup, "too many upvalues");
 			foreach( var pair in define )
 			{
 				for( int i=0; i<nup; ++i )

@@ -51,13 +51,13 @@ namespace UniLua
 			}
 		}
 
-		private LuaObject T_GetTM( LuaTable mt, TMS tm )
+		private StkId T_GetTM( LuaTable mt, TMS tm )
 		{
 			if( mt == null )
 				return null;
 
 			var res = mt.GetStr( GetTagMethodName( tm ) );
-			if( res.IsNil ) // no tag method?
+			if(res.V.TtIsNil()) // no tag method?
 			{
 				// cache this fact
 				mt.NoTagMethodFlags |= 1u << (int)tm;
@@ -67,33 +67,33 @@ namespace UniLua
 				return res;
 		}
 
-		private LuaObject T_GetTMByObj( LuaObject o, TMS tm )
+		private StkId T_GetTMByObj( ref TValue o, TMS tm )
 		{
 			LuaTable mt = null;
 
-			switch( o.LuaType )
+			switch( o.Tt )
 			{
-				case LuaType.LUA_TTABLE:
+				case (int)LuaType.LUA_TTABLE:
 				{
-					LuaTable tbl = o as LuaTable;
+					var tbl = o.HValue();
 					mt = tbl.MetaTable;
 					break;
 				}
-				case LuaType.LUA_TUSERDATA:
+				case (int)LuaType.LUA_TUSERDATA:
 				{
-					LuaUserData ud = o as LuaUserData;
+					var ud = o.RawUValue();
 					mt = ud.MetaTable;
 					break;
 				}
 				default:
 				{
-					mt = G.MetaTables[(int)o.LuaType];
+					mt = G.MetaTables[o.Tt];
 					break;
 				}
 			}
 			return (mt != null)
 				 ? mt.GetStr( GetTagMethodName( tm ) )
-				 : new LuaNil();
+				 : TheNilValue;
 		}
 
 	}

@@ -7,7 +7,6 @@ using Debug = UniLua.Tools.Debug;
 
 namespace UniLua
 {
-
 	public partial class LuaState
 	{
 
@@ -25,11 +24,11 @@ namespace UniLua
 #if DEBUG_FIND_UPVALUE
 				Debug.Log("[F_FindUpval] >>>>>>>>>>>>>>>>>>>> upval.V:" + upval.V );
 #endif
-				if( upval.V.Index < level.Index )
+				if(upval.V.Index < level.Index)
 					break;
 
 				var next = node.Next;
-				if( upval.V.Value == level.Value )
+				if(upval.V == level)
 					return upval;
 
 				prev = node;
@@ -69,8 +68,8 @@ namespace UniLua
 				OpenUpval.Remove( node );
 				node = next;
 
-				upval.Value[0] = upval.V.Value;
-				upval.V = new StkId( upval.Value, 0 );
+				upval.Value.V.SetObj(ref upval.V.V);
+				upval.V = upval.Value;
 			}
 		}
 

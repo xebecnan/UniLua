@@ -154,6 +154,7 @@ namespace UniLua
 			}
 			else // loading from a reader function
 			{
+				// TODO
 				throw new System.NotImplementedException();
 			}
 
@@ -167,6 +168,13 @@ namespace UniLua
 
 		private static int FinishPCall( ILuaState lua, bool status )
 		{
+			// no space for extra boolean?
+			if(!lua.CheckStack(1)) {
+				lua.SetTop(0); // create space for return values
+				lua.PushBoolean(false);
+				lua.PushString("stack overflow");
+				return 2;
+			}
 			lua.PushBoolean( status );
 			lua.Replace( 1 );
 			return lua.GetTop();
@@ -178,6 +186,7 @@ namespace UniLua
 			ThreadStatus status = lua.GetContext( out context );
 			return FinishPCall( lua, status == ThreadStatus.LUA_YIELD );
 		}
+		private static CSharpFunctionDelegate DG_PCallContinuation = PCallContinuation;
 
 		public static int B_PCall( ILuaState lua )
 		{
@@ -186,7 +195,7 @@ namespace UniLua
 			lua.Insert( 1 ); // create space for status result
 
 			ThreadStatus status = lua.PCallK( lua.GetTop() - 2,
-				LuaDef.LUA_MULTRET, 0, 0, PCallContinuation );
+				LuaDef.LUA_MULTRET, 0, 0, DG_PCallContinuation );
 
 			return FinishPCall( lua, status == ThreadStatus.LUA_OK );
 		}
@@ -199,7 +208,7 @@ namespace UniLua
 			lua.Copy( 2, 1); // ...and error handler
 			lua.Replace( 2 );
 			ThreadStatus status = lua.PCallK( n-2, LuaDef.LUA_MULTRET,
-				1, 0, PCallContinuation );
+				1, 0, DG_PCallContinuation );
 			return FinishPCall( lua, status == ThreadStatus.LUA_OK );
 		}
 
@@ -377,10 +386,11 @@ namespace UniLua
 				return 1;
 			}
 		}
+		static CSharpFunctionDelegate DG_B_Next = B_Next;
 
 		public static int B_Pairs( ILuaState lua )
 		{
-			return PairsMeta( lua, "__pairs", false, B_Next );
+			return PairsMeta( lua, "__pairs", false, DG_B_Next );
 		}
 
 		private static int IpairsAux( ILuaState lua )
@@ -391,10 +401,11 @@ namespace UniLua
 			lua.RawGetI( 1, i );
 			return lua.IsNil( -1 ) ? 1 : 2;
 		}
+		static CSharpFunctionDelegate DG_IpairsAux = IpairsAux;
 
 		public static int B_Ipairs( ILuaState lua )
 		{
-			return PairsMeta( lua, "__ipairs", true, IpairsAux );
+			return PairsMeta( lua, "__ipairs", true, DG_IpairsAux );
 		}
 
 		public static int B_Print( ILuaState lua )

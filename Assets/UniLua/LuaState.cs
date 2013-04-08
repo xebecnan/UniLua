@@ -60,141 +60,7 @@ namespace UniLua
 		{
 			return new Pointer<T>( lhs.List, lhs.Index - rhs );
 		}
-
-		// private /////////////////////////////////////////
 	}
-
-	public struct StkId
-	{
-		private LuaObject			IsolateValue;
-
-		private List<LuaObject> 	List;
-		public  int 				Index { get; set; }
-
-		public  LuaObject			Value
-		{
-			get
-			{
-				if( IsolateValue != null )
-					return IsolateValue;
-
-				EnsureStack();
-				return List[Index];
-			}
-			set
-			{
-				if( IsolateValue != null )
-					throw new System.NotImplementedException();
-
-				EnsureStack();
-				List[Index] = value;
-			}
-		}
-
-		public  LuaObject			ValueInc
-		{
-			get
-			{
-				if( IsolateValue != null )
-					throw new System.NotImplementedException();
-
-				EnsureStack();
-				return List[Index++];
-			}
-			set
-			{
-				if( IsolateValue != null )
-					throw new System.NotImplementedException();
-
-				EnsureStack();
-				List[Index++] = value;
-			}
-		}
-
-		public bool IsNull
-		{
-			get { return List == null && IsolateValue == null; }
-		}
-
-		public StkId( List<LuaObject> list, int index )
-		{
-			List = list;
-			Index = index;
-		}
-
-		public StkId( StkId other ) : this( other.List, other.Index ) { }
-
-		public StkId( LuaObject val ) : this( null, 0 ) {
-			IsolateValue = val;
-		}
-
-		public static StkId operator +( StkId lhs, int rhs )
-		{
-			if( lhs.IsolateValue != null )
-				throw new System.NotImplementedException();
-
-			return new StkId( lhs.List, lhs.Index + rhs );
-		}
-
-		public static StkId operator -( StkId lhs, int rhs )
-		{
-			if( lhs.IsolateValue != null )
-				throw new System.NotImplementedException();
-
-			return new StkId( lhs.List, lhs.Index - rhs );
-		}
-
-		public static bool operator ==( StkId lhs, StkId rhs )
-		{
-			return lhs.Equals( rhs );
-		}
-
-		public static bool operator !=( StkId lhs, StkId rhs )
-		{
-			return !lhs.Equals( rhs );
-		}
-
-		public override bool Equals( object o )
-		{
-			if( !(o is StkId) )
-				return false;
-
-			return Equals((StkId)o);
-		}
-
-		public bool Equals( StkId o )
-		{
-			return (this.IsolateValue 	== o.IsolateValue)
-				&& (this.List			== o.List)
-				&& (this.Index			== o.Index);
-		}
-
-		public override int GetHashCode()
-		{
-			return ((IsolateValue != null) ? IsolateValue.GetHashCode() : 0)
-				 ^ ((List != null) ? List.GetHashCode() : 0)
-				 ^ (Index.GetHashCode());
-		}
-
-		public override string ToString()
-		{
-			if( IsolateValue != null )
-				return string.Format( "[StkId(Isolate/{0})]", IsolateValue );
-			else
-				return string.Format( "[StkId({0}/{1})]", Index, Value );
-		}
-
-		// private /////////////////////////////////////////
-
-		private void EnsureStack()
-		{
-			while( Index >= List.Count )
-			{
-				List.Add( new LuaNil() );
-			}
-		}
-	}
-
 
 	public enum CallStatus
 	{
@@ -212,50 +78,29 @@ namespace UniLua
 
 	public class CallInfo
 	{
-		public StkId Func;
-		public StkId Top;
+		public CallInfo[] List;
+		public int Index;
 
-		public CallInfo Previous;
-		public CallInfo Next;
+		public int FuncIndex;
+		public int TopIndex;
 
 		public int NumResults;
 		public CallStatus CallStatus;
 
 		public CSharpFunctionDelegate ContinueFunc;
 		public int Context;
-		public StkId Extra;
+		public int ExtraIndex;
 		public bool OldAllowHook;
 		public int OldErrFunc;
 		public ThreadStatus Status;
 
 		// for Lua functions
-		public StkId Base;
+		public int BaseIndex;
 		public InstructionPtr SavedPc;
 
 		public bool IsLua
 		{
 			get { return (CallStatus & CallStatus.CIST_LUA) != 0; }
-		}
-
-		public LuaLClosure CurrentLuaFunc
-		{
-			get
-			{
-				if(IsLua)
-				{
-					return Func.Value as LuaLClosure;
-				}
-				else return null;
-			}
-		}
-
-		public int CurrentLine
-		{
-			get
-			{
-				var lcl = Func.Value as LuaLClosure;
-				return lcl.Proto.GetFuncLine( CurrentPc );
-			}
 		}
 
 		public int CurrentPc
@@ -270,7 +115,7 @@ namespace UniLua
 
 	public class GlobalState
 	{
-		public LuaTable		Registry;
+		public StkId		Registry;
 		public LuaUpvalue 	UpvalHead;
 		public LuaTable[] 	MetaTables;
 		public LuaState		MainThread;
@@ -278,7 +123,7 @@ namespace UniLua
 		public GlobalState( LuaState state )
 		{
 			MainThread	= state;
-			Registry 	= new LuaTable();
+			Registry 	= new StkId();
 			UpvalHead 	= new LuaUpvalue();
 			MetaTables 	= new LuaTable[(int)LuaType.LUA_NUMTAGS];
 		}
@@ -286,11 +131,14 @@ namespace UniLua
 
 	public delegate void LuaHookDelegate(ILuaState lua, LuaDebug ar);
 
-	public partial class LuaState : LuaObject
+	public partial class LuaState
 	{
-		public StkId 			Top;
+		public StkId[]			Stack;
+		public StkId			Top;
+		public int				StackSize;
+		public int				StackLast;
 		public CallInfo 		CI;
-		public CallInfo 		BaseCI;
+		public CallInfo[] 		BaseCI;
 		public GlobalState		G;
 		public int				NumNonYieldable;
 		public int				NumCSharpCalls;
@@ -308,8 +156,13 @@ namespace UniLua
 		private Queue<Instruction> InstructionHistory;
 #endif
 
-
 		private ILuaAPI 	API;
+
+		static LuaState()
+		{
+			TheNilValue = new StkId();
+			TheNilValue.V.SetNilValue();
+		}
 
 		public LuaState( GlobalState g=null )
 		{
@@ -343,55 +196,79 @@ namespace UniLua
 			InitStack();
 		}
 
-		private List<LuaObject> StateStack;
-
 		private void IncrTop()
 		{
-			++Top.Index;
+			StkId.inc(ref Top);
+			D_CheckStack(0);
 		}
 
 		private StkId RestoreStack( int index )
 		{
-			return new StkId( StateStack, index );
+			return Stack[index];
 		}
 
 		private void ApiIncrTop()
 		{
-			++Top.Index;
+			StkId.inc(ref Top);
 			// Debug.Log( "[ApiIncrTop] ==== Top.Index:" + Top.Index );
 			// Debug.Log( "[ApiIncrTop] ==== CI.Top.Index:" + CI.Top.Index );
-			Utl.ApiCheck( Top.Index <= CI.Top.Index, "stack overflow" );
+			Utl.ApiCheck( Top.Index <= CI.TopIndex, "stack overflow" );
 		}
 
 		private void InitStack()
 		{
-			StateStack = new List<LuaObject>();
-			Top = new StkId( StateStack, 0 );
+			Stack = new StkId[LuaDef.BASIC_STACK_SIZE];
+			StackSize = LuaDef.BASIC_STACK_SIZE;
+			StackLast = LuaDef.BASIC_STACK_SIZE - LuaDef.EXTRA_STACK;
+			for(int i=0; i<LuaDef.BASIC_STACK_SIZE; ++i) {
+				var newItem = new StkId();
+				Stack[i] = newItem;
+				newItem.SetList(Stack);
+				newItem.SetIndex(i);
+				newItem.V.SetNilValue();
+			}
+			Top = Stack[0];
 
-			BaseCI = new CallInfo();
-			BaseCI.Next = null;
-			BaseCI.Previous = null;
-			BaseCI.Func = Top;
-			Top.ValueInc = new LuaNil(); // `function' entry for this `ci'
-			BaseCI.Top = Top + LuaDef.LUA_MINSTACK;
-			CI = BaseCI;
+			BaseCI = new CallInfo[LuaDef.BASE_CI_SIZE];
+			for(int i=0; i<LuaDef.BASE_CI_SIZE; ++i) {
+				var newCI = new CallInfo();
+				BaseCI[i] = newCI;
+				newCI.List = BaseCI;
+				newCI.Index = i;
+			}
+			CI = BaseCI[0];
+			CI.FuncIndex = Top.Index;
+			StkId.inc(ref Top).V.SetNilValue(); // `function' entry for this `ci'
+			CI.TopIndex = Top.Index + LuaDef.LUA_MINSTACK;
 		}
 
 		private void InitRegistry()
 		{
-			G.Registry.SetInt( LuaDef.LUA_RIDX_MAINTHREAD, this );
-			G.Registry.SetInt( LuaDef.LUA_RIDX_GLOBALS, new LuaTable() );
+			var mt = new TValue();
+
+			G.Registry.V.SetHValue(new LuaTable(this));
+
+			mt.SetThValue(this);
+			G.Registry.V.HValue().SetInt(LuaDef.LUA_RIDX_MAINTHREAD, ref mt);
+
+			mt.SetHValue(new LuaTable(this));
+			G.Registry.V.HValue().SetInt(LuaDef.LUA_RIDX_GLOBALS, ref mt);
 		}
 
 		private string DumpStackToString( int baseIndex, string tag="" )
 		{
 			System.Text.StringBuilder sb = new System.Text.StringBuilder();
-			sb.Append( string.Format( "===================================================================== DumpStack: {0}", tag) ).Append("\n");;
-			for( int i=0; i<StateStack.Count || i <= Top.Index; ++i )
+			sb.Append( string.Format( "===================================================================== DumpStack: {0}", tag) ).Append("\n");
+			sb.Append( string.Format( "== BaseIndex: {0}", baseIndex) ).Append("\n");
+			sb.Append( string.Format( "== Top.Index: {0}", Top.Index) ).Append("\n");
+			sb.Append( string.Format( "== CI.Index: {0}", CI.Index) ).Append("\n");
+			sb.Append( string.Format( "== CI.TopIndex: {0}", CI.TopIndex) ).Append("\n");
+			sb.Append( string.Format( "== CI.Func.Index: {0}", CI.FuncIndex) ).Append("\n");
+			for( int i=0; i<Stack.Length || i <= Top.Index; ++i )
 			{
 				bool isTop = Top.Index == i;
 				bool isBase = baseIndex == i;
-				bool inStack = i < StateStack.Count;
+				bool inStack = i < Stack.Length;
 
 				string postfix = ( isTop || isBase )
 					? string.Format( "<--------------------- {0}{1}"
@@ -402,7 +279,7 @@ namespace UniLua
 				string body = string.Format("======== {0}/{1} > {2} {3}"
 					, i-baseIndex
 					, i
-					, inStack ? StateStack[i].ToString() : ""
+					, inStack ? Stack[i].ToString() : ""
 					, postfix
 				);
 
@@ -411,31 +288,10 @@ namespace UniLua
 			return sb.ToString();
 		}
 
-		private void DumpStack( int baseIndex, string tag="" )
+		public void DumpStack( int baseIndex, string tag="" )
 		{
 #if ENABLE_DUMP_STACK
-			Debug.Log( string.Format( "===================================================================== DumpStack: {0}", tag) );
-			for( int i=0; i<StateStack.Count || i <= Top.Index; ++i )
-			{
-				bool isTop = Top.Index == i;
-				bool isBase = baseIndex == i;
-				bool inStack = i < StateStack.Count;
-
-				string postfix = ( isTop || isBase )
-					? string.Format( "<--------------------- {0}{1}"
-						, isBase ? "[BASE]" : ""
-						, isTop  ? "[TOP]"  : ""
-						)
-					: "";
-				string body = string.Format("======== {0}/{1} > {2} {3}"
-					, i-baseIndex
-					, i
-					, inStack ? StateStack[i].ToString() : ""
-					, postfix
-				);
-
-				Debug.Log( body	);
-			}
+			Debug.Log(DumpStackToString(baseIndex, tag));
 #endif
 		}
 

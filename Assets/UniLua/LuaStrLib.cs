@@ -77,6 +77,7 @@ namespace UniLua
 			int n = pose - posi + 1;
 			if( posi + n <= pose) // overflow?
 				return lua.L_Error( "string slice too long" );
+			lua.L_CheckStack(n, "string slice too long");
 			for( int i=0; i<n; ++i )
 				lua.PushInteger( (byte)s[(int)posi+i-1] );
 			return n;
@@ -489,9 +490,10 @@ namespace UniLua
 			}
 		}
 
-		private static int PushCaptures( MatchState ms, int spos, int epos )
+		private static int PushCaptures(ILuaState lua, MatchState ms, int spos, int epos )
 		{
 			int nLevels = (ms.Level == 0 && spos >= 0) ? 1 : ms.Level;
+			lua.L_CheckStack(nLevels, "too many captures");
 			for( int i=0; i<nLevels; ++i )
 				PushOneCapture( ms, i, spos, epos );
 			return nLevels; // number of strings pushed
@@ -551,9 +553,9 @@ namespace UniLua
 						{
 							lua.PushInteger( s1+1 ); // start
 							lua.PushInteger( res );  // end
-							return PushCaptures( ms, -1, 0 ) + 2;
+							return PushCaptures(lua, ms, -1, 0) + 2;
 						}
-						else return PushCaptures( ms, s1, res );
+						else return PushCaptures(lua, ms, s1, res);
 					}
 				} while( s1++ < ms.SrcEnd && !anchor );
 			}
@@ -704,7 +706,7 @@ namespace UniLua
 					int newStart = (e == 0) ? e+1: e;
 					lua.PushInteger( newStart );
 					lua.Replace( lua.UpvalueIndex(3) );
-					return PushCaptures( ms, s, e );
+					return PushCaptures(lua, ms, s, e);
 				}
 			}
 			return 0; // not found

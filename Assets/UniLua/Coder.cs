@@ -823,20 +823,23 @@ namespace UniLua
 		public static int StringK( FuncState fs, string s )
 		{
 			// Debug.Log(" STRING K >>>> " + s );
-			var o = new LuaString( s );
-			return AddK( fs, o, o );
+			var o = new TValue();
+			o.SetSValue(s);
+			return AddK( fs, ref o, ref o );
 		}
 
 		public static int NumberK( FuncState fs, double r )
 		{
-			var o = new LuaNumber( r );
-			return AddK( fs, o, o );
+			var o = new TValue();
+			o.SetNValue(r);
+			return AddK( fs, ref o, ref o );
 		}
 
 		private static int BoolK( FuncState fs, bool b )
 		{
-			var o = new LuaBoolean( b );
-			return AddK( fs, o, o );
+			var o = new TValue();
+			o.SetBValue(b);
+			return AddK( fs, ref o, ref o );
 		}
 
 		private static int NilK( FuncState fs )
@@ -847,11 +850,12 @@ namespace UniLua
 			// var o = new LuaNil();
 			// return AddK( fs, k, o );
 
-			var o = new LuaNil();
-			return AddK( fs, o, o );
+			var o = new TValue();
+			o.SetNilValue();
+			return AddK( fs, ref o, ref o );
 		}
 
-		public static int AddK( FuncState fs, LuaObject key, LuaObject v )
+		public static int AddK( FuncState fs, ref TValue key, ref TValue v )
 		{
 			int idx;
 			if( fs.H.TryGetValue( key, out idx ) )
@@ -859,7 +863,10 @@ namespace UniLua
 
 			idx = fs.Proto.K.Count;
 			fs.H.Add( key, idx );
-			fs.Proto.K.Add( v );
+
+			var newItem = new StkId();
+			newItem.V.SetObj(ref v);
+			fs.Proto.K.Add(newItem);
 			// Debug.Log("--------- ADD K ------- " + fs.Proto.K.Count + " line:" + fs.Lexer.LineNumber + " key:" + key);
 			return idx;
 		}

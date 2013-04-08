@@ -106,3 +106,11 @@ Generated_Code #added for RIA/Silverlight projects
 _UpgradeReport_Files/
 Backup*/
 UpgradeLog*.XML
+
+# Unity3D
+/Library
+/Assembly-CSharp-vs.csproj
+/Assembly-CSharp.csproj
+/Assembly-CSharp.pidb
+/*.sln
+/*.userprefs

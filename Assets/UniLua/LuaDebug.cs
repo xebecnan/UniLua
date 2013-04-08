@@ -5,7 +5,7 @@ namespace UniLua
 	{
 		public string 		Name;
 		public string 		NameWhat;
-		public CallInfo 	ActiveCI;
+		public int 			ActiveCIIndex;
 		public int			CurrentLine;
 		public int			NumUps;
 		public bool			IsVarArg;
@@ -25,15 +25,14 @@ namespace UniLua
 			if( level < 0 )
 				return false;
 
-			CallInfo ci;
-			for( ci = CI; level > 0 && ci != BaseCI; ci = ci.Previous )
-				level--;
+			int index;
+			for( index = CI.Index; level > 0 && index > 0; --index )
+				{ level--; }
 
 			bool status = false;
-			if( level == 0 && ci != BaseCI )
-			{
+			if( level == 0 && index > 0 ) {
 				status = true;
-				ar.ActiveCI = ci;
+				ar.ActiveCIIndex = index;
 			}
 			return status;
 		}
@@ -47,25 +46,25 @@ namespace UniLua
 			if( what[pos] == '>' )
 			{
 				ci = null;
-				func = Top - 1;
+				func = Stack[Top.Index - 1];
 
-				Utl.ApiCheck( func.Value.IsFunction, "function expected" );
+				Utl.ApiCheck(func.V.TtIsFunction(), "function expected");
 				pos++;
 
-				Top -= 1;
+				Top = Stack[Top.Index-1];
 			}
 			else
 			{
-				ci = ar.ActiveCI;
-				func = ci.Func;
-				Utl.Assert( ci.Func.Value.IsFunction );
+				ci = BaseCI[ar.ActiveCIIndex];
+				func = Stack[ci.FuncIndex];
+				Utl.Assert(Stack[ci.FuncIndex].V.TtIsFunction());
 			}
 
 			// var IsClosure( func.Value ) ? func.Value
 			int status = AuxGetInfo( what, ar, func, ci );
 			if( what.Contains( "f" ) )
 			{
-				Top.Value = func.Value;
+				Top.V.SetObj(ref func.V);
 				IncrTop();
 			}
 			if( what.Contains( "L" ) )
@@ -90,25 +89,25 @@ namespace UniLua
 					}
 					case 'l':
 					{
-						ar.CurrentLine = (ci != null && ci.IsLua) ? ci.CurrentLine : -1;
+						ar.CurrentLine = (ci != null && ci.IsLua) ? GetCurrentLine(ci) : -1;
 						break;
 					}
 					case 'u':
 					{
-						var ccl = func.Value as LuaCSharpClosure;
-						var lcl = func.Value as LuaLClosure;
-						if( ccl != null )
-						{
-							ar.NumUps = ccl.Upvals.Count;
-							ar.IsVarArg = true;
-							ar.NumParams = 0;
-						}
-						else if( lcl != null )
-						{
-							ar.NumUps = lcl.Upvals.Count;
+						Utl.Assert(func.V.TtIsFunction());
+						if(func.V.ClIsLuaClosure()) {
+							var lcl = func.V.ClLValue();
+							ar.NumUps = lcl.Upvals.Length;
 							ar.IsVarArg = lcl.Proto.IsVarArg;
 							ar.NumParams = lcl.Proto.NumParams;
 						}
+						else if(func.V.ClIsCsClosure()) {
+							var ccl = func.V.ClCsValue();
+							ar.NumUps = ccl.Upvals.Length;
+							ar.IsVarArg = true;
+							ar.NumParams = 0;
+						}
+						else throw new System.NotImplementedException();
 						break;
 					}
 					case 't':
@@ -120,11 +119,12 @@ namespace UniLua
 					}
 					case 'n':
 					{
+						var prevCI = BaseCI[ci.Index-1];
 						if( ci != null
 							&& ((ci.CallStatus & CallStatus.CIST_TAIL) == 0)
-							&& ci.Previous.IsLua )
+							&& prevCI.IsLua )
 						{
-							ar.NameWhat = GetFuncName( ci.Previous, out ar.Name );
+							ar.NameWhat = GetFuncName( prevCI, out ar.Name );
 						}
 						else
 						{
@@ -149,30 +149,29 @@ namespace UniLua
 
 		private void CollectValidLines( StkId func )
 		{
-			var ccl = func.Value as LuaCSharpClosure;
-			var lcl = func.Value as LuaLClosure;
-			if( ccl != null )
-			{
-				Top.Value = new LuaNil();
-				IncrTop();
-			}
-			else if( lcl != null )
-			{
+			Utl.Assert(func.V.TtIsFunction());
+			if(func.V.ClIsLuaClosure()) {
+				var lcl = func.V.ClLValue();
 				var p = lcl.Proto;
 				var lineinfo = p.LineInfo;
-				var t = new LuaTable();
-				Top.Value = t;
+				var t = new LuaTable(this);
+				Top.V.SetHValue(t);
 				IncrTop();
+				var v = new TValue();
+				v.SetBValue(true);
 				for( int i=0; i<lineinfo.Count; ++i )
-					t.SetInt( lineinfo[i], new LuaBoolean(true) );
+					t.SetInt(lineinfo[i], ref v);
 			}
-			else
-				throw new System.NotImplementedException();
+			else if(func.V.ClIsCsClosure()) {
+				Top.V.SetNilValue();
+				IncrTop();
+			}
+			else throw new System.NotImplementedException();
 		}
 
 		private string GetFuncName( CallInfo ci, out string name )
 		{
-			var proto = ci.CurrentLuaFunc.Proto; // calling function
+			var proto = GetCurrentLuaFunc(ci).Proto; // calling function
 			var pc = ci.CurrentPc; // calling instruction index
 			var ins = proto.Code[pc]; // calling instruction
 
@@ -220,23 +219,23 @@ namespace UniLua
 
 		private void FuncInfo( LuaDebug ar, StkId func )
 		{
-			var ccl = func.Value as LuaCSharpClosure;
-			var lcl = func.Value as LuaLClosure;
-			if( ccl != null )
-			{
-				ar.Source = "=[C#]";
-				ar.LineDefined = -1;
-				ar.LastLineDefined = -1;
-				ar.What = "C#";
-			}
-			else if( lcl != null )
-			{
+			Utl.Assert(func.V.TtIsFunction());
+			if(func.V.ClIsLuaClosure()) {
+				var lcl = func.V.ClLValue();
 				var p = lcl.Proto;
 				ar.Source = string.IsNullOrEmpty(p.Source) ? "=?" : p.Source;
 				ar.LineDefined = p.LineDefined;
 				ar.LastLineDefined = p.LastLineDefined;
 				ar.What = (ar.LineDefined == 0) ? "main" : "Lua";
 			}
+			else if(func.V.ClIsCsClosure()) {
+				ar.Source = "=[C#]";
+				ar.LineDefined = -1;
+				ar.LastLineDefined = -1;
+				ar.What = "C#";
+			}
+			else throw new System.NotImplementedException();
+
 			if( ar.Source.Length > LuaDef.LUA_IDSIZE )
 			{
 				ar.ShortSrc = ar.Source.Substring(0, LuaDef.LUA_IDSIZE);
@@ -250,8 +249,8 @@ namespace UniLua
 			// TODO
 			if( CI.IsLua )
 			{
-				var line = CI.CurrentLine;
-				var src = CI.CurrentLuaFunc.Proto.Source;
+				var line = GetCurrentLine(CI);
+				var src = GetCurrentLuaFunc(CI).Proto.Source;
 				if( src == null )
 					src = "?";
 
@@ -275,14 +274,12 @@ namespace UniLua
 			{
 				StkId errFunc = RestoreStack( ErrFunc );
 
-				var lcl = errFunc.Value as LuaLClosure;
-				var ccl = errFunc.Value as LuaCSharpClosure;
-				if( lcl == null && ccl == null )
+				if(!errFunc.V.TtIsFunction())
 					D_Throw( ThreadStatus.LUA_ERRERR );
 
-				var below = Top - 1;
-				Top.Value = below.Value;
-				below.Value = errFunc.Value;
+				var below = Stack[Top.Index-1];
+				Top.V.SetObj(ref below.V);
+				below.V.SetObj(ref errFunc.V);
 				IncrTop();
 				
 				D_Call( below, 1, false );
@@ -299,11 +296,11 @@ namespace UniLua
 
 		private string GetUpvalueName( CallInfo ci, StkId o, out string name )
 		{
-			var lcl = ci.Func.Value as LuaLClosure;
-			for( int i=0; i<lcl.Upvals.Count; ++i )
-			{
-				if( lcl.Upvals[i].V == o )
-				{
+			var func = Stack[ci.FuncIndex];
+			Utl.Assert(func.V.TtIsFunction() && func.V.ClIsLuaClosure());
+			var lcl = func.V.ClLValue();
+			for(int i=0; i<lcl.Upvals.Length; ++i) {
+				if( lcl.Upvals[i].V == o ) {
 					name = UpvalName( lcl.Proto, i );
 					return "upvalue";
 				}
@@ -316,8 +313,8 @@ namespace UniLua
 		{
 			if( Instruction.ISK(c) ) { // is `c' a constant
 				var val = proto.K[Instruction.INDEXK(c)];
-				if( val.IsString ) { // literal constant?
-					name = (val as LuaString).Value;
+				if(val.V.TtIsString()) { // literal constant?
+					name = val.V.SValue();
 					return;
 				}
 				// else no reasonable name found
@@ -434,9 +431,9 @@ namespace UniLua
 							? ins.GETARG_Bx()
 							: proto.Code[pc+1].GETARG_Ax();
 						var val = proto.K[b];
-						if( val.IsString )
+						if(val.V.TtIsString())
 						{
-							name = (val as LuaString).Value;
+							name = val.V.SValue();
 							return "constant";
 						}
 						break;
@@ -461,9 +458,9 @@ namespace UniLua
 			return false;
 		}
 
-		private void G_SimpleTypeError( LuaObject o, string op )
+		private void G_SimpleTypeError( ref TValue o, string op )
 		{
-			string t = ObjTypeName( o );
+			string t = ObjTypeName( ref o );
 			G_RunError( "attempt to {0} a {1} value", op, t );
 		}
 
@@ -472,15 +469,15 @@ namespace UniLua
 			CallInfo ci = CI;
 			string name = null;
 			string kind = null;
-			string t = ObjTypeName( o.Value );
+			string t = ObjTypeName(ref o.V);
 			if( ci.IsLua )
 			{
 				kind = GetUpvalueName( ci, o, out name);
 				if( kind != null && IsInStack( ci, o ) )
 				{
-					var lcl = ci.Func.Value as LuaLClosure;
+					var lcl = Stack[ci.FuncIndex].V.ClLValue();
 					kind = GetObjName( lcl.Proto, ci.CurrentPc,
-						(o.Index - ci.Base.Index), out name );
+						(o.Index - ci.BaseIndex), out name );
 				}
 			}
 			if( kind != null )
@@ -492,16 +489,17 @@ namespace UniLua
 
 		private void G_ArithError( StkId p1, StkId p2 )
 		{
-			if( V_ToNumber( p1.Value ) == null )
-				p2 = p1;
+			var n = new TValue();
+			if( !V_ToNumber( p1, ref n ) )
+				{ p2 = p1; } // first operand is wrong
 
 			G_TypeError( p2, "perform arithmetic on" );
 		}
 
 		private void G_OrderError( StkId p1, StkId p2 )
 		{
-			string t1 = ObjTypeName( p1.Value );
-			string t2 = ObjTypeName( p2.Value );
+			string t1 = ObjTypeName(ref p1.V);
+			string t2 = ObjTypeName(ref p2.V);
 			if( t1 == t2 )
 				G_RunError( "attempt to compare two {0} values", t1 );
 			else

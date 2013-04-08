@@ -8,10 +8,10 @@ using Debug = UniLua.Tools.Debug;
 
 namespace UniLua
 {
-	// using PlatformCfg = PlatformCfgX32;
-	// using SizeT = UInt32;
-	using PlatformCfg = PlatformCfgX64;
-	using SizeT = UInt64;
+	using PlatformCfg = PlatformCfgX32;
+	using SizeT = UInt32;
+	// using PlatformCfg = PlatformCfgX64;
+	// using SizeT = UInt64;
 
 	internal static class PlatformCfgX64
 	{
@@ -270,25 +270,30 @@ namespace UniLua
 #if DEBUG_UNDUMP
 				Debug.Log( "Constant Type:" + t );
 #endif
+				var v = new StkId();
 				switch( t )
 				{
 					case (int)LuaType.LUA_TNIL:
-						proto.K.Add( new LuaNil() );
+						v.V.SetNilValue();
+						proto.K.Add( v );
 						break;
 
 					case (int)LuaType.LUA_TBOOLEAN:
-						proto.K.Add( new LuaBoolean( LoadBoolean() ) );
+						v.V.SetBValue(LoadBoolean());
+						proto.K.Add( v );
 						break;
 
 					case (int)LuaType.LUA_TNUMBER:
-						proto.K.Add( new LuaNumber( LoadNumber() ) );
+						v.V.SetNValue(LoadNumber());
+						proto.K.Add( v );
 						break;
 
 					case (int)LuaType.LUA_TSTRING:
 #if DEBUG_UNDUMP
 						Debug.Log( "LuaType.LUA_TSTRING" );
 #endif
-						proto.K.Add( new LuaString( LoadString() ) );
+						v.V.SetSValue(LoadString());
+						proto.K.Add( v );
 						break;
 
 					default:

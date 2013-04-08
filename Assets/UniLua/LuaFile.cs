@@ -13,14 +13,14 @@ namespace UniLua
 		public static FileLoadInfo OpenFile( string filename )
 		{
 			var path = LUA_ROOT + filename;
-			return new FileLoadInfo( File.Open( path, FileMode.Open ) );
+			return new FileLoadInfo( File.Open( path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite ) );
 		}
 
 		public static bool Readable( string filename )
 		{
 			var path = LUA_ROOT + filename;
 			try {
-				using( var stream = File.Open( path, FileMode.Open ) ) {
+				using( var stream = File.Open( path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite ) ) {
 					return true;
 				}
 			}

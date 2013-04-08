@@ -1,5 +1,5 @@
 ﻿
-// #define DEBUG_LUA_TABLE
+// #define DEBUG_DUMMY_TVALUE_MODIFY
 
 using System.Collections.Generic;
 
@@ -7,198 +7,496 @@ using Debug = UniLua.Tools.Debug;
 
 namespace UniLua
 {
+	public class LuaTable {
+		public LuaTable MetaTable;
+		// public int Length { get; private set; }
+		public uint NoTagMethodFlags;
 
-	public class LuaTable : LuaObject
-	{
-		private class Node {
-			public LuaObject		Key;
-			public LuaObject		Value;
-			public Node				Prev;
-			public Node				Next;
-			public Node( LuaObject key, LuaObject value )
-				{ Key = key; Value = value; }
+		public LuaTable(LuaState l) {
+			InitLuaTable(l);
 		}
 
-		private Dictionary<LuaObject, Node> 	DictPart;
-		private Node							Head;
+		public StkId Get(ref TValue key)
+		{
+			if(key.Tt == (int)LuaType.LUA_TNIL) { return TheNilValue; }
 
-		// 当 dirty 为 false 时, 缓存的 legnth 是精确的
-		// 当 dirty 为 true 时, 实际 length 一定 >= 缓存的 length
-		private int								CachedLength;
-		private bool							CachedLengthDirty;
+			if(IsPositiveInteger(ref key))
+				{ return GetInt((int)key.NValue); }
 
-		public uint								NoTagMethodFlags;
+			if(key.Tt == (int)LuaType.LUA_TSTRING)
+				{ return GetStr(key.SValue()); }
 
-		public int Length {
-			get {
-				if( !CachedLengthDirty )
-					return CachedLength;
-				else {
-					int i = CachedLength + 1;
-					while( DictPart.ContainsKey( new LuaNumber(i) ) ) {
-						++i;
-					}
-					CachedLength = i - 1;
-					CachedLengthDirty = false;
-					return CachedLength;
+			var h = key.GetHashCode();
+			for(var node = GetHashNode(h); node != null; node = node.Next) {
+				if(node.Key.V == key) {
+					{ return node.Val; }
+				}
+			}
+
+			return TheNilValue;
+		}
+
+		public StkId GetInt(int key)
+		{
+			if(0 < key && key-1 < ArrayPart.Length)
+				{ return ArrayPart[key-1]; }
+
+			for(var node = GetHashNode(key); node != null; node = node.Next) {
+				if(node.Key.V.TtIsNumber() && node.Key.V.NValue == (double)key)
+					{ return node.Val; }
+			}
+
+			return TheNilValue;
+		}
+
+		public StkId GetStr(string key)
+		{
+			var h = key.GetHashCode();
+			for(var node = GetHashNode(h); node != null; node = node.Next) {
+				if(node.Key.V.TtIsString() && node.Key.V.SValue() == key)
+					{ return node.Val; }
+			}
+
+			return TheNilValue;
+		}
+
+		public void Set(ref TValue key, ref TValue val)
+		{
+			var cell = Get(ref key);
+			if(cell == TheNilValue) {
+				cell = NewTableKey(ref key);
+			}
+			cell.V.SetObj(ref val);
+		}
+
+		public void SetInt(int key, ref TValue val)
+		{
+			var cell = GetInt(key);
+			if(cell == TheNilValue) {
+				var k = new TValue();
+				k.SetNValue(key);
+				cell = NewTableKey(ref k);
+			}
+			cell.V.SetObj(ref val);
+		}
+
+		/*
+		** returns the index of a `key' for table traversals. First goes all
+		** elements in the array part, then elements in the hash part. The
+		** beginning of a traversal is signaled by -1.
+		*/
+		private int FindIndex(StkId key)
+		{
+			if(key.V.TtIsNil())
+				{ return -1; }
+
+			// is `key' inside array part?
+			int i = ArrayIndex(ref key.V);
+			if(0 < i && i <= ArrayPart.Length)
+				{ return i-1; }
+
+			var n = GetHashNode(ref key.V);
+			// check whether `key' is somewhere in the chain
+			for(;;) {
+				if(L.V_RawEqualObj(ref n.Key.V, ref key.V))
+					{ return ArrayPart.Length + n.Index; }
+				n = n.Next;
+
+				// key not found
+				if(n == null) { L.G_RunError("invalid key to 'next'"); }
+			}
+		}
+
+		public bool Next(StkId key, StkId val)
+		{
+			// find original element
+			int i = FindIndex(key);
+
+			// try first array part
+			for(i++; i<ArrayPart.Length; ++i) {
+				if(!ArrayPart[i].V.TtIsNil()) {
+					key.V.SetNValue(i+1);
+					val.V.SetObj(ref ArrayPart[i].V);
+					return true;
+				}
+			}
+
+			// then hash part
+			for(i-=ArrayPart.Length; i<HashPart.Length; ++i) {
+				if(!HashPart[i].Val.V.TtIsNil()) {
+					key.V.SetObj(ref HashPart[i].Key.V);
+					val.V.SetObj(ref HashPart[i].Val.V);
+					return true;
+				}
+			}
+			return false;
+		}
+
+		public int Length
+		{ get {
+			uint j = (uint)ArrayPart.Length;
+			if(j > 0 && ArrayPart[j-1].V.TtIsNil()) {
+				/* there is a boundary in the array part: (binary) search for it */
+				uint i = 0;
+				while(j - i > 1) {
+					uint m = (i+j)/2;
+					if(ArrayPart[m-1].V.TtIsNil()) { j = m; }
+					else { i = m; }
+				}
+				return (int)i;
+			}
+			/* else must find a boundary in hash part */
+			else if(HashPart == DummyHashPart)
+				return (int)j;
+			else return UnboundSearch(j);
+		} }
+
+		public void Resize(int nasize, int nhsize)
+		{
+			int oasize = ArrayPart.Length;
+			var oldHashPart = HashPart;
+			if(nasize > oasize) // array part must grow?
+				SetArraryVector(nasize);
+
+			// create new hash part with appropriate size
+			SetNodeVector(nhsize);
+
+			// array part must shrink?
+			if(nasize < oasize) {
+				var oldArrayPart = ArrayPart;
+				ArrayPart = DummyArrayPart;
+				// re-insert elements from vanishing slice
+				for(int i=nasize; i<oasize; ++i) {
+					if(!oldArrayPart[i].V.TtIsNil())
+						{ SetInt(i+1, ref oldArrayPart[i].V); }
+				}
+				// shrink array
+				var newArrayPart = new StkId[nasize];
+				for(int i=0; i<nasize; ++i) {
+					newArrayPart[i] = oldArrayPart[i];
+				}
+				ArrayPart = newArrayPart;
+			}
+
+			// re-insert elements from hash part
+			for(int i=0; i<oldHashPart.Length; ++i) {
+				var node = oldHashPart[i];
+				if(!node.Val.V.TtIsNil()) {
+					Set(ref node.Key.V, ref node.Val.V);
 				}
 			}
 		}
 
-		public override LuaType LuaType {
-			get { return LuaType.LUA_TTABLE; }
-		}
+		//-----------------------------------------
+		//
+		// **** PRIVATE below ****
+		//
+		//-----------------------------------------
 
-		public override bool IsTable		{ get { return true; } }
-
-		public LuaTable MetaTable { get; set; }
-
-		public LuaTable( int arraySize=0, int dictSize=0 )
+		private class HNode
 		{
-			DictPart = new Dictionary<LuaObject, Node>( arraySize + dictSize );
-			Head	 = null;
+			public int Index;
+			public StkId Key;
+			public StkId Val;
+			public HNode Next;
 
-			CachedLength		= 0;
-			CachedLengthDirty	= false;
-
-			NoTagMethodFlags	= ~0u;
-		}
-
-		public void SetInt( int key, LuaObject val )
-		{
-			Set( new LuaNumber(key), val );
-		}
-
-		public LuaObject GetInt( int key )
-		{
-			return Get( new LuaNumber( key ) );
-		}
-
-		public LuaObject GetStr( string key )
-		{
-			return Get( new LuaString( key ) );
-		}
-
-		public void Set( LuaObject key, LuaObject val )
-		{
-			if( val.IsNil ) {
-				_Remove( key );
-			}
-			else {
-				_Set( key, val );
-			}
-
-			// invalidate no-tag-method cache
-			NoTagMethodFlags = 0u;
-		}
-
-		public LuaObject Get( LuaObject key )
-		{
-			Node node;
-			if( DictPart.TryGetValue( key, out node ) )
+			public void CopyFrom(HNode o)
 			{
-				return node.Value;
-			}
-
-			return new LuaNil();
-		}
-
-		public void DebugGet( LuaObject key, out LuaObject outKey,
-			out LuaObject outValue )
-		{
-			Node node;
-			if( DictPart.TryGetValue( key, out node ) ) {
-				outKey	 = node.Key;
-				outValue = node.Value;
-			}
-			else {
-				outKey 		= new LuaNil();
-				outValue	= new LuaNil();
+				Key.V.SetObj(ref o.Key.V);
+				Val.V.SetObj(ref o.Val.V);
+				Next = o.Next;
 			}
 		}
 
-		public bool Next( LuaState lua, StkId key )
-		{
-			var val = key+1;
-			Node next;
+		private LuaState L;
 
-			if( key.Value.IsNil )
-				next = Head;
-			else if( DictPart.TryGetValue( key.Value, out next ) )
-				next = next.Next;
+		private StkId[] ArrayPart;
+		private HNode[] HashPart;
+		private int LastFree;
+
+		private static StkId TheNilValue;
+		private static StkId[] DummyArrayPart;
+		private static HNode DummyNode;
+		private static HNode[] DummyHashPart;
+
+		private const int MAXBITS = 30;
+		private const int MAXASIZE = (1 << MAXBITS);
+
+		static LuaTable()
+		{
+			TheNilValue = new StkId();
+			TheNilValue.V.SetNilValue();
+#if DEBUG_DUMMY_TVALUE_MODIFY
+			TheNilValue.V.Lock_ = true;
+#endif
+
+			DummyArrayPart = new StkId[0];
+
+			DummyNode = new HNode();
+			DummyNode.Key = TheNilValue;
+			DummyNode.Val = TheNilValue;
+			DummyNode.Next = null;
+
+			DummyHashPart = new HNode[1];
+			DummyHashPart[0] = DummyNode;
+			DummyHashPart[0].Index = 0;
+		}
+
+		private void InitLuaTable(LuaState lua)
+		{
+			L = lua;
+			ArrayPart = DummyArrayPart;
+			SetNodeVector(0);
+		}
+
+		private bool IsPositiveInteger(ref TValue v)
+		{
+			return (v.TtIsNumber() && v.NValue > 0 && (v.NValue % 1) == 0);
+		}
+
+		private HNode GetHashNode(int hashcode)
+		{
+			uint n = (uint)hashcode;
+			return HashPart[n % HashPart.Length];
+		}
+
+		private HNode GetHashNode(ref TValue v)
+		{
+			if(IsPositiveInteger(ref v)) { return GetHashNode((int)v.NValue); }
+
+			if(v.TtIsString()) { return GetHashNode(v.SValue().GetHashCode()); }
+
+			return GetHashNode(v.GetHashCode());
+		}
+
+		private void SetArraryVector(int size)
+		{
+			Utl.Assert(size >= ArrayPart.Length);
+
+			var newArrayPart = new StkId[size];
+			int i = 0;
+			for( ; i<ArrayPart.Length; ++i) {
+				newArrayPart[i] = ArrayPart[i];
+			}
+			for( ; i<size; ++i) {
+				newArrayPart[i] = new StkId();
+				newArrayPart[i].V.SetNilValue();
+			}
+			ArrayPart = newArrayPart;
+		}
+
+		private void SetNodeVector(int size)
+		{
+			if(size == 0) {
+				HashPart = DummyHashPart;
+				LastFree = size;
+				return;
+			}
+
+			int lsize = CeilLog2(size);
+			if(lsize > MAXBITS) { L.G_RunError("table overflow"); }
+
+			size = (1 << lsize);
+			HashPart = new HNode[size];
+			for(int i=0; i<size; ++i) {
+				HashPart[i] = new HNode();
+				HashPart[i].Index = i;
+				HashPart[i].Key = new StkId();
+				HashPart[i].Key.V.SetNilValue();
+				HashPart[i].Val = new StkId();
+				HashPart[i].Val.V.SetNilValue();
+				HashPart[i].Next = null;
+			}
+			LastFree = size;
+		}
+
+		private HNode GetFreePos()
+		{
+			while(LastFree > 0) {
+				var node = HashPart[--LastFree];
+				if(node.Key.V.TtIsNil()) { return node; }
+			}
+			return null;
+		}
+
+		/*
+		** returns the index for `key' if `key' is an appropriate key to live in
+		** the array part of the table, -1 otherwise.
+		*/
+		private int ArrayIndex(ref TValue k)
+		{
+			if(IsPositiveInteger(ref k))
+				return (int)k.NValue;
 			else
-				((LuaState)lua).G_RunError("invalid key to 'next'");
-
-			if( next != null ) {
-				key.Value = next.Key;
-				val.Value = next.Value;
-				return true;
-			}
-			else return false;
+				return -1;
 		}
 
-		private void _UpdateLengthOnRemove( LuaObject key )
+		private static readonly byte[] Log2_ = new byte[] {
+			0,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
+			6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
+			7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+			7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+			8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+			8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+			8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+			8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8
+		};
+		private int CeilLog2(int x)
 		{
-			var n = key as LuaNumber;
-			if( n == null )
-				return;
-
-			int i = (int)n.Value;
-			if( 1 <= i && i <= CachedLength ) {
-				CachedLength = i - 1;
-				CachedLengthDirty = false;
-			}
+			Utl.Assert(x > 0);
+			int l = 0;
+			x--;
+			while(x >= 256) { l+=8; x>>=8; }
+			return l + Log2_[x];
 		}
 
-		private void _UpdateLengthOnAppend( LuaObject key )
+		private int CountInt(ref TValue key, ref int[] nums)
 		{
-			var n = key as LuaNumber;
-			if( n == null )
-				return;
-
-			int i = (int)n.Value;
-			if( i == CachedLength + 1 ) {
-				CachedLength = i;
-				CachedLengthDirty = true;
+			int k = ArrayIndex(ref key);
+			if(0 < k && k <= MAXASIZE) {
+				nums[CeilLog2(k)]++;
+				return 1;
 			}
+			else return 0;
 		}
 
-		private void _Remove( LuaObject key )
+		private int NumUseArray(ref int[] nums)
 		{
-			Node old;
-			if( DictPart.TryGetValue( key, out old ) ) {
-				if( Head == old ) Head = old.Next;
-				if( old.Prev != null ) old.Prev.Next = old.Next;
-				if( old.Next != null ) old.Next.Prev = old.Prev;
-				DictPart.Remove( key );
+			int ause = 0;
+			int i = 1;
+			for(int lg=0, ttlg=1; lg<=MAXBITS; lg++, ttlg*=2) {
+				int lc = 0; // counter
+				int lim = ttlg;
+				if(lim > ArrayPart.Length) {
+					lim = ArrayPart.Length;
+					if(i > lim) { break; } // no more elements to count
+				}
 
-				_UpdateLengthOnRemove(key);
+				// count elements in range (2^(lg-1), 2^lg]
+				for(; i<=lim; ++i) {
+					if(!ArrayPart[i-1].V.TtIsNil()) { lc++; }
+				}
+				nums[lg] += lc;
+				ause += lc;
 			}
+			return ause;
 		}
 
-		private void _Set( LuaObject key, LuaObject val )
+		private int NumUseHash(ref int[] nums, ref int nasize)
 		{
-			var vnode = new Node(key, val);
-			Node old;
-			if( DictPart.TryGetValue( key, out old ) ) {
-				if( Head == old ) Head = vnode;
-				vnode.Prev = old.Prev;
-				vnode.Next = old.Next;
-				if( old.Prev != null ) old.Prev.Next = vnode;
-				if( old.Next != null ) old.Next.Prev = vnode;
+			int totaluse = 0;
+			int ause = 0;
+			int i = HashPart.Length;
+			while(i-- > 0) {
+				var n = HashPart[i];
+				if(!n.Val.V.TtIsNil()) {
+					ause += CountInt(ref n.Key.V, ref nums);
+					totaluse++;
+				}
 			}
-			else {
-				vnode.Next = Head;
-				if( Head != null ) Head.Prev = vnode;
-				Head = vnode;
-
-				_UpdateLengthOnAppend( key );
-			}
-
-			DictPart[ key ] = vnode;
+			nasize += ause;
+			return totaluse;
 		}
 
+		private int ComputeSizes(ref int[] nums, ref int nasize)
+		{
+			int a = 0;
+			int na = 0;
+			int n = 0;
+			for(int i=0, tti=1; tti/2<nasize; ++i, tti*=2) {
+				if(nums[i] > 0) {
+					a += nums[i];
+					if(a > tti/2) {
+						n = tti;
+						na = a;
+					}
+				}
+				if(a == nasize) { break; } // all elements already conted
+			}
+			nasize = n;
+			Utl.Assert(nasize/2 <= na && na <= nasize);
+			return na;
+		}
+
+		private void Rehash(ref TValue k)
+		{
+			int[] nums = new int[MAXBITS+1];
+			for(int i=0; i<=MAXBITS; ++i) { nums[i] = 0; }
+
+			int nasize = NumUseArray(ref nums);
+			int totaluse = nasize;
+			totaluse += NumUseHash(ref nums, ref nasize);
+			nasize += CountInt(ref k, ref nums);
+			totaluse++;
+			int na = ComputeSizes(ref nums, ref nasize);
+			Resize(nasize, totaluse-na);
+		}
+
+		private StkId NewTableKey(ref TValue k)
+		{
+			if(k.TtIsNil()) { L.G_RunError("table index is nil"); }
+
+			if(k.TtIsNumber() && System.Double.IsNaN(k.NValue))
+				{ L.G_RunError("table index is NaN"); }
+
+			var mp = GetHashNode(ref k);
+
+			// if main position is taken
+			if(!mp.Val.V.TtIsNil() || mp == DummyNode) {
+				var n = GetFreePos();
+				if(n == null) {
+					Rehash(ref k);
+					var cell = Get(ref k);
+					if(cell != TheNilValue) { return cell; }
+					return NewTableKey(ref k);
+				}
+
+				Utl.Assert(n != DummyNode);
+				var othern = GetHashNode(ref mp.Key.V);
+				// is colliding node out of its main position?
+				if(othern != mp) {
+					while(othern.Next != mp) { othern = othern.Next; }
+					othern.Next = n;
+					n.CopyFrom(mp);
+					mp.Next = null;
+					mp.Val.V.SetNilValue();
+				}
+				// colliding node is in its own main position
+				else {
+					n.Next = mp.Next;
+					mp.Next = n;
+					mp = n;
+				}
+			}
+
+			mp.Key.V.SetObj(ref k);
+			Utl.Assert(mp.Val.V.TtIsNil());
+			return mp.Val;
+		}
+
+		private int UnboundSearch(uint j)
+		{
+			uint i = j;
+			j++;
+			while(!GetInt((int)j).V.TtIsNil()) {
+				i = j;
+				j *= 2;
+
+				// overflow?
+				if(j > LuaLimits.MAX_INT) { 
+					/* table was built with bad purposes: resort to linear search */
+					i = 1;
+					while(!GetInt((int)i).V.TtIsNil()) { i++; }
+					return (int)(i-1);
+				}
+			}
+			/* now do a binary search between them */
+			while(j - i > 1) {
+				uint m = (i + j) / 2;
+				if(GetInt((int)m).V.TtIsNil()) { j = m; }
+				else { i = m; }
+			}
+			return (int)i;
+		}
 	}
-
 }
-

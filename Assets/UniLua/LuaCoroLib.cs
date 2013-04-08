@@ -33,6 +33,10 @@ namespace UniLua
 
 		private static int AuxResume( ILuaState lua, ILuaState co, int narg )
 		{
+			if(!co.CheckStack(narg)) {
+				lua.PushString("too many arguments to resume");
+				return -1; // error flag
+			}
 			if( co.Status == ThreadStatus.LUA_OK && co.GetTop() == 0 )
 			{
 				lua.PushString( "cannot resume dead coroutine" );
@@ -43,6 +47,11 @@ namespace UniLua
 			if( status == ThreadStatus.LUA_OK || status == ThreadStatus.LUA_YIELD )
 			{
 				int nres = co.GetTop();
+				if(!lua.CheckStack(nres+1)) {
+					co.Pop(nres); // remove results anyway;
+					lua.PushString("too many results to resume");
+					return -1; // error flag
+				}
 				co.XMove( lua, nres ); // move yielded values
 				return nres;
 			}

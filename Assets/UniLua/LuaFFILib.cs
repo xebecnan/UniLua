@@ -5,6 +5,7 @@ using System.Collections.Generic;
 
 namespace UniLua
 {
+	using Debug = UniLua.Tools.Debug;
 
 	internal class LuaFFILib
 	{
@@ -57,7 +58,7 @@ namespace UniLua
 			if( assembly != null )
 				AssemblyList.Add( assembly );
 			else
-				UnityEngine.Debug.LogError("assembly not found:" + name);
+				Debug.LogError("assembly not found:" + name);
 			return 0;
 		}
 
@@ -101,7 +102,7 @@ namespace UniLua
 		{
 			string typename = lua.ToString(1);
 			var t = GetType(typename);
-			// UnityEngine.Debug.Log("GET TYPE:" + typename + " => " + t );
+			// Debug.Log("GET TYPE:" + typename + " => " + t );
 			if( t != null )
 				lua.PushLightUserData(t);
 			else
@@ -240,7 +241,7 @@ namespace UniLua
 				BindingFlags.Public );
 			if( finfo == null )
 				throw new Exception("GetField failed:"+name);
-			// UnityEngine.Debug.Log("FFI_GetField t:"+t+" name:"+name+" finfo:"+finfo);
+			// Debug.Log("FFI_GetField t:"+t+" name:"+name+" finfo:"+finfo);
 			lua.PushLightUserData(finfo);
 			return 1;
 		}
@@ -261,7 +262,7 @@ namespace UniLua
 			var inst = lua.ToUserData(2);
 			var t = (Type)lua.ToUserData(4);
 			var value = LuaStackUtil.ToRawValue(lua, 3, t);
-			// UnityEngine.Debug.Log("FFI_SetPropValue finfo:"+finfo+" t:"+t+" value:"+value);
+			// Debug.Log("FFI_SetPropValue finfo:"+finfo+" t:"+t+" value:"+value);
 			finfo.SetValue( inst, value );
 			return 0;
 		}
@@ -273,7 +274,7 @@ namespace UniLua
 			var pinfo = t.GetProperty( name,
 				BindingFlags.Instance |
 				BindingFlags.Public );
-			// UnityEngine.Debug.Log("FFI_GetProp t:"+t+" name:"+name+" pinfo:"+pinfo);
+			// Debug.Log("FFI_GetProp t:"+t+" name:"+name+" pinfo:"+pinfo);
 			if( pinfo == null )
 				throw new Exception("GetProperty failed:"+name);
 			lua.PushLightUserData(pinfo);
@@ -287,7 +288,7 @@ namespace UniLua
 			var pinfo = t.GetProperty( name,
 				BindingFlags.Static |
 				BindingFlags.Public );
-			// UnityEngine.Debug.Log("FFI_GetStaticProp t:"+t+" name:"+name+" pinfo:"+pinfo);
+			// Debug.Log("FFI_GetStaticProp t:"+t+" name:"+name+" pinfo:"+pinfo);
 			if( pinfo == null )
 				throw new Exception("GetProperty failed:"+name);
 			lua.PushLightUserData(pinfo);
@@ -310,7 +311,7 @@ namespace UniLua
 			var inst = lua.ToUserData(2);
 			var t = (Type)lua.ToUserData(4);
 			var value = LuaStackUtil.ToRawValue(lua, 3, t);
-			// UnityEngine.Debug.Log("FFI_SetPropValue pinfo:"+pinfo+" t:"+t+" value:"+value);
+			// Debug.Log("FFI_SetPropValue pinfo:"+pinfo+" t:"+t+" value:"+value);
 			pinfo.SetValue( inst, value, null );
 			return 0;
 		}
@@ -449,7 +450,7 @@ namespace UniLua
 					}
 
 					default: {
-						// UnityEngine.Debug.Log( "==========" +
+						// Debug.Log( "==========" +
 						// 	" Name:" + t.Name +
 						// 	" FullName:" + t.FullName );
 
@@ -516,7 +517,7 @@ namespace UniLua
 						var u = lua.ToUserData(index);
 						if( u == null )
 						{
-							// UnityEngine.Debug.Log( "==========" +
+							// Debug.Log( "==========" +
 							// 	" Name:" + t.Name +
 							// 	" FullName:" + t.FullName );
 							return null;
@@ -538,7 +539,7 @@ namespace UniLua
 				for( int i=0; i<parameters.Length; ++i )
 				{
 					ParameterTypes[i] = parameters[i].ParameterType;
-					// UnityEngine.Debug.Log( string.Format(
+					// Debug.Log( string.Format(
 					// 	"&&&& PARAMETER {0} {1}", i, ParameterTypes[i] ) );
 				}
 			}
@@ -548,7 +549,7 @@ namespace UniLua
 				const int firstParamPos = 3;
 				int n = lua.GetTop();
 				var inst  = lua.ToUserData(2);
-				// UnityEngine.Debug.Log(string.Format(
+				// Debug.Log(string.Format(
 				// 	"**** inst {0}", inst
 				// 	));
 				int nparam = n - firstParamPos + 1;
@@ -556,13 +557,13 @@ namespace UniLua
 				for( int i=0; i<nparam; ++i )
 				{
 					// var par = lua.ToObject(firstParamPos + i);
-					// // UnityEngine.Debug.Log(string.Format(
+					// // Debug.Log(string.Format(
 					// // 	"**** {0} {1} {2} {3} {4}",
 					// // 	firstParamPos+i, par, n, i, ParameterTypes.Length
 					// // 	));
 					// var partype = ParameterTypes[i];
 					// parameters[i] = ConvertParameter(par, partype);
-					// // UnityEngine.Debug.Log(string.Format(
+					// // Debug.Log(string.Format(
 					// // 	"parameters[{0}] = {1}" +
 					// // 	"\npar: {2}\npartype: {3}",
 					// // 	i, parameters[i], par, partype));
@@ -597,7 +598,7 @@ namespace UniLua
 			// 			var u = par as LuaLightUserData;
 			// 			if( u == null )
 			// 			{
-			// 				UnityEngine.Debug.Log( "==========" +
+			// 				Debug.Log( "==========" +
 			// 					" Name:" + partype.Name +
 			// 					" FullName:" + partype.FullName );
 			// 				return null;
@@ -638,7 +639,7 @@ namespace UniLua
 				// 	}
 
 				// 	default: {
-				// 		UnityEngine.Debug.Log( "==========" +
+				// 		Debug.Log( "==========" +
 				// 			" Name:" + ReturnType.Name +
 				// 			" FullName:" + ReturnType.FullName );
 

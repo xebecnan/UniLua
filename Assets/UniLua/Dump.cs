@@ -78,11 +78,6 @@ namespace UniLua
 			DumpByte( value ? (byte)1 : (byte) 0 );
 		}
 
-		private void DumpLuaBoolean( LuaBoolean value )
-		{
-			DumpBool( value.Value );
-		}
-
 		private void DumpInt( int value )
 		{
 			DumpBlock( BitConverter.GetBytes( value ) );
@@ -91,11 +86,6 @@ namespace UniLua
 		private void DumpUInt( uint value )
 		{
 			DumpBlock( BitConverter.GetBytes( value ) );
-		}
-
-		private void DumpLuaNumber( LuaNumber value )
-		{
-			DumpBlock( BitConverter.GetBytes( value.Value ) );
 		}
 
 		private void DumpString( string value )
@@ -110,17 +100,7 @@ namespace UniLua
 				foreach( var b in value )
 					DumpByte( (byte)b );
 				DumpByte( (byte)'\0' );
-
-				// DumpUInt( (uint)(bytes.Length + 1) );
-				// var bytes = Encoding.ASCII.GetBytes( value );
-				// DumpBlock( bytes );
-				// DumpByte( (byte)'\0' );
 			}
-		}
-
-		private void DumpLuaString( LuaString value )
-		{
-			DumpString( value.Value );
 		}
 
 		private void DumpByte( byte value )
@@ -139,20 +119,20 @@ namespace UniLua
 		private void DumpConstants( LuaProto proto )
 		{
 			DumpVector( proto.K, (k) => {
-				var t = k.LuaType;
+				var t = k.V.Tt;
 				DumpByte( (byte)t );
 				switch( t )
 				{
-					case LuaType.LUA_TNIL:
+					case (int)LuaType.LUA_TNIL:
 						break;
-					case LuaType.LUA_TBOOLEAN:
-						DumpLuaBoolean( k as LuaBoolean );
+					case (int)LuaType.LUA_TBOOLEAN:
+						DumpBool(k.V.BValue());
 						break;
-					case LuaType.LUA_TNUMBER:
-						DumpLuaNumber( k as LuaNumber );
+					case (int)LuaType.LUA_TNUMBER:
+						DumpBlock( BitConverter.GetBytes(k.V.NValue) );
 						break;
-					case LuaType.LUA_TSTRING:
-						DumpLuaString( k as LuaString );
+					case (int)LuaType.LUA_TSTRING:
+						DumpString(k.V.SValue());
 						break;
 					default:
 						Utl.Assert(false);
