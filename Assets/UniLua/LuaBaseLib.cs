@@ -2,7 +2,7 @@
 namespace UniLua
 {
 	using System.Collections.Generic;
-	using Debug = UniLua.Tools.Debug;
+	using ULDebug = UniLua.Tools.ULDebug;
 	using StringBuilder = System.Text.StringBuilder;
 	using Char = System.Char;
 	using Int32 = System.Int32;
@@ -426,7 +426,7 @@ namespace UniLua
 				sb.Append( s );
 				lua.Pop( 1 );
 			}
-			Debug.Log( sb.ToString() );
+			ULDebug.Log( sb.ToString() );
 			return 0;
 		}
 

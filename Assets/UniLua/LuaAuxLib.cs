@@ -27,6 +27,7 @@ namespace UniLua
 		void 	L_CheckAny( int narg );
 		void 	L_CheckType( int index, LuaType t );
 		double	L_CheckNumber( int narg );
+		UInt64	L_CheckUInt64( int narg );
 		int 	L_CheckInteger( int narg );
 		string 	L_CheckString( int narg );
 		uint	L_CheckUnsigned( int narg );
@@ -38,6 +39,7 @@ namespace UniLua
 		bool 	L_GetMetaField( int index, string method );
 		int 	L_GetSubTable( int index, string fname );
 
+		void 	L_RequireF( string moduleName, CSharpFunctionDelegate openFunc, bool global );
 		void 	L_OpenLibs();
 		void 	L_NewLibTable( NameFuncPair[] define );
 		void	L_NewLib( NameFuncPair[] define );
@@ -176,6 +178,15 @@ namespace UniLua
 			if( !isnum )
 				TagError( narg, LuaType.LUA_TNUMBER );
 			return d;
+		}
+
+		public UInt64 L_CheckUInt64( int narg )
+		{
+			bool isnum;
+			UInt64 v = API.ToUInt64X( narg, out isnum );
+			if( !isnum )
+				TagError( narg, LuaType.LUA_TUINT64 );
+			return v;
 		}
 
 		public int L_CheckInteger( int narg )

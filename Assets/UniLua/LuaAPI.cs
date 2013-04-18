@@ -106,6 +106,8 @@ namespace UniLua
 		uint	ToUnsignedX( int index, out bool isnum );
 		uint	ToUnsigned( int index );
 		bool   	ToBoolean( int index );
+		UInt64	ToUInt64( int index );
+		UInt64	ToUInt64X( int index, out bool isnum );
 		object 	ToObject( int index );
 		object  ToUserData( int index );
 		ILuaState	ToThread( int index );
@@ -1015,7 +1017,7 @@ namespace UniLua
 					return "userdata";
 
 				case LuaType.LUA_TUINT64:
-					return "userdata";
+					return "UInt64";
 
 				case LuaType.LUA_TNUMBER:
 					return "number";
@@ -1491,6 +1493,29 @@ namespace UniLua
 			return !IsFalse(ref addr.V);
 		}
 
+		UInt64 ILuaAPI.ToUInt64X( int index, out bool isnum )
+		{
+			StkId addr;
+			if( !Index2Addr( index, out addr ) ) {
+				isnum = false;
+				return 0;
+			}
+
+			if( !addr.V.TtIsUInt64() ) {
+				isnum = false;
+				return 0;
+			}
+
+			isnum = true;
+			return addr.V.UInt64Value;
+		}
+
+		UInt64 ILuaAPI.ToUInt64( int index )
+		{
+			bool isnum;
+			return API.ToUInt64X( index, out isnum );
+		}
+
 		object ILuaAPI.ToObject( int index )
 		{
 			StkId addr;
@@ -1510,7 +1535,7 @@ namespace UniLua
 				case (int)LuaType.LUA_TUSERDATA:
 					throw new System.NotImplementedException();
 				case (int)LuaType.LUA_TLIGHTUSERDATA: { return addr.V.OValue; }
-				case (int)LuaType.LUA_TUINT64: { return (UInt64)addr.V.OValue; }
+				case (int)LuaType.LUA_TUINT64: { return addr.V.UInt64Value; }
 				default: return null;
 			}
 		}

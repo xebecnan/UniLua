@@ -3,8 +3,6 @@
 
 using System.Collections.Generic;
 
-using Debug = UniLua.Tools.Debug;
-
 namespace UniLua
 {
 	public class LuaTable {

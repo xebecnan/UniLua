@@ -18,7 +18,7 @@ using System.Collections.Generic;
 
 namespace UniLua
 {
-	using Debug = UniLua.Tools.Debug;
+	using ULDebug = UniLua.Tools.ULDebug;
 	using StringBuilder = System.Text.StringBuilder;
 
 	public partial class LuaState
@@ -71,10 +71,10 @@ newframe:
 			env.Base = ci.BaseIndex;
 
 #if DEBUG_NEW_FRAME
-			Debug.Log( "#### NEW FRAME #########################################################################" );
-			Debug.Log( "## cl:" + cl );
-			Debug.Log( "## Base:" + env.Base );
-			Debug.Log( "########################################################################################" );
+			ULDebug.Log( "#### NEW FRAME #########################################################################" );
+			ULDebug.Log( "## cl:" + cl );
+			ULDebug.Log( "## Base:" + env.Base );
+			ULDebug.Log( "########################################################################################" );
 #endif
 
 			while( true )
@@ -102,7 +102,7 @@ newframe:
 #endif
 
 #if DEBUG_INSTRUCTION
-				Debug.Log( System.DateTime.Now + " [VM] ======================================================================== Instruction: " + i
+				ULDebug.Log( System.DateTime.Now + " [VM] ======================================================================== Instruction: " + i
 #if DEBUG_INSTRUCTION_WITH_STACK
 				+ "\n" + DumpStackToString( env.Base.Index )
 #endif
@@ -123,8 +123,8 @@ newframe:
 						var rb = env.RB;
 
 #if DEBUG_OP_MOVE
-						Debug.Log( "[VM] ==== OP_MOVE rb:" + rb );
-						Debug.Log( "[VM] ==== OP_MOVE ra:" + ra );
+						ULDebug.Log( "[VM] ==== OP_MOVE rb:" + rb );
+						ULDebug.Log( "[VM] ==== OP_MOVE ra:" + ra );
 #endif
 
 						ra.V.SetObj(ref rb.V);
@@ -172,10 +172,10 @@ newframe:
 #if DEBUG_OP_GETUPVAL
 						// foreach( var upval in cl.Upvals )
 						// {
-						// 	Debug.Log("[VM] ==== GETUPVAL upval:" + upval );
+						// 	ULDebug.Log("[VM] ==== GETUPVAL upval:" + upval );
 						// }
-						Debug.Log( "[VM] ==== GETUPVAL b:" + b );
-						Debug.Log( "[VM] ==== GETUPVAL ra:" + ra );
+						ULDebug.Log( "[VM] ==== GETUPVAL b:" + b );
+						ULDebug.Log( "[VM] ==== GETUPVAL ra:" + ra );
 #endif
 						break;
 					}
@@ -186,8 +186,8 @@ newframe:
 						var key = env.RKC;
 						V_GetTable( cl.Upvals[b].V, key, ra );
 #if DEBUG_OP_GETTABUP
-						Debug.Log( "[VM] ==== OP_GETTABUP key:" + key );
-						Debug.Log( "[VM] ==== OP_GETTABUP val:" + ra );
+						ULDebug.Log( "[VM] ==== OP_GETTABUP key:" + key );
+						ULDebug.Log( "[VM] ==== OP_GETTABUP val:" + ra );
 #endif
 						env.Base = ci.BaseIndex;
 						break;
@@ -200,8 +200,8 @@ newframe:
 						var val = ra;
 						V_GetTable( tbl, key, val );
 #if DEBUG_OP_GETTABLE
-						Debug.Log("[VM] ==== OP_GETTABLE key:"+key.ToString());
-						Debug.Log("[VM] ==== OP_GETTABLE val:"+val.ToString());
+						ULDebug.Log("[VM] ==== OP_GETTABLE key:"+key.ToString());
+						ULDebug.Log("[VM] ==== OP_GETTABLE val:"+val.ToString());
 #endif
 						break;
 					}
@@ -214,8 +214,8 @@ newframe:
 						var val = env.RKC;
 						V_SetTable( cl.Upvals[a].V, key, val );
 #if DEBUG_OP_SETTABUP
-						Debug.Log( "[VM] ==== OP_SETTABUP key:" + key.Value );
-						Debug.Log( "[VM] ==== OP_SETTABUP val:" + val.Value );
+						ULDebug.Log( "[VM] ==== OP_SETTABUP key:" + key.Value );
+						ULDebug.Log( "[VM] ==== OP_SETTABUP val:" + val.Value );
 #endif
 						env.Base = ci.BaseIndex;
 						break;
@@ -227,8 +227,8 @@ newframe:
 						var uv = cl.Upvals[b];
 						uv.V.V.SetObj(ref ra.V);
 #if DEBUG_OP_SETUPVAL
-						Debug.Log( "[VM] ==== SETUPVAL b:" + b );
-						Debug.Log( "[VM] ==== SETUPVAL ra:" + ra );
+						ULDebug.Log( "[VM] ==== SETUPVAL b:" + b );
+						ULDebug.Log( "[VM] ==== SETUPVAL ra:" + ra );
 #endif
 						break;
 					}
@@ -238,8 +238,8 @@ newframe:
 						var key = env.RKB;
 						var val = env.RKC;
 #if DEBUG_OP_SETTABLE
-						Debug.Log( "[VM] ==== OP_SETTABLE key:" + key.ToString() );
-						Debug.Log( "[VM] ==== OP_SETTABLE val:" + val.ToString() );
+						ULDebug.Log( "[VM] ==== OP_SETTABLE key:" + key.ToString() );
+						ULDebug.Log( "[VM] ==== OP_SETTABLE val:" + val.ToString() );
 #endif
 						V_SetTable( ra, key, val );
 						break;
@@ -399,10 +399,10 @@ newframe:
 						var rhs = env.RKC;
 						var expectEq = i.GETARG_A() != 0;
 #if DEBUG_OP_EQ
-						Debug.Log( "[VM] ==== OP_EQ lhs:" + lhs );
-						Debug.Log( "[VM] ==== OP_EQ rhs:" + rhs );
-						Debug.Log( "[VM] ==== OP_EQ expectEq:" + expectEq );
-						Debug.Log( "[VM] ==== OP_EQ (lhs.V == rhs.V):" + (lhs.V == rhs.V) );
+						ULDebug.Log( "[VM] ==== OP_EQ lhs:" + lhs );
+						ULDebug.Log( "[VM] ==== OP_EQ rhs:" + rhs );
+						ULDebug.Log( "[VM] ==== OP_EQ expectEq:" + expectEq );
+						ULDebug.Log( "[VM] ==== OP_EQ (lhs.V == rhs.V):" + (lhs.V == rhs.V) );
 #endif
 						if((lhs.V == rhs.V) != expectEq)
 						{
@@ -625,7 +625,7 @@ newframe:
 
 						DumpStack( env.Base );
 #if DEBUG_INSTRUCTION
-						Debug.Log( "[VM] ============================================================ OP_TFORCALL Instruction: " + i );
+						ULDebug.Log( "[VM] ============================================================ OP_TFORCALL Instruction: " + i );
 #endif
 
 						Utl.Assert( i.GET_OPCODE() == OpCode.OP_TFORLOOP );
@@ -670,8 +670,8 @@ l_tforloop:
 							tbl.SetInt(last--, ref Stack[rai+n].V);
 						}
 #if DEBUG_OP_SETLIST
-						Debug.Log( "[VM] ==== OP_SETLIST ci.Top:" + ci.Top.Index );
-						Debug.Log( "[VM] ==== OP_SETLIST Top:" + Top.Index );
+						ULDebug.Log( "[VM] ==== OP_SETLIST ci.Top:" + ci.Top.Index );
+						ULDebug.Log( "[VM] ==== OP_SETLIST Top:" + Top.Index );
 #endif
 						Top = Stack[ci.TopIndex]; // correct top (in case of previous open call)
 						break;
@@ -682,13 +682,13 @@ l_tforloop:
 						LuaProto p = cl.Proto.P[ i.GETARG_Bx() ];
 						V_PushClosure( p, cl.Upvals, env.Base, ra );
 #if DEBUG_OP_CLOSURE
-						Debug.Log( "OP_CLOSURE:" + ra.Value );
+						ULDebug.Log( "OP_CLOSURE:" + ra.Value );
 						var racl = ra.Value as LuaLClosure;
 						if( racl != null )
 						{
 							for( int ii=0; ii<racl.Upvals.Count; ++ii )
 							{
-								Debug.Log( ii + " ) " + racl.Upvals[ii] );
+								ULDebug.Log( ii + " ) " + racl.Upvals[ii] );
 							}
 						}
 #endif
@@ -745,7 +745,7 @@ l_tforloop:
 
 		private void V_NotImplemented( Instruction i )
 		{
-			Debug.LogError( "[VM] ==================================== Not Implemented Instruction: " + i );
+			ULDebug.LogError( "[VM] ==================================== Not Implemented Instruction: " + i );
 			// throw new NotImplementedException();
 		}
 
@@ -839,9 +839,9 @@ l_tforloop:
 			ra.V.SetClLValue(ncl);
 			for( int i=0; i<p.Upvalues.Count; ++i )
 			{
-				// Debug.Log( "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ V_PushClosure i:" + i );
-				// Debug.Log( "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ V_PushClosure InStack:" + p.Upvalues[i].InStack );
-				// Debug.Log( "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ V_PushClosure Index:" + p.Upvalues[i].Index );
+				// ULDebug.Log( "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ V_PushClosure i:" + i );
+				// ULDebug.Log( "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ V_PushClosure InStack:" + p.Upvalues[i].InStack );
+				// ULDebug.Log( "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ V_PushClosure Index:" + p.Upvalues[i].Index );
 
 				if( p.Upvalues[i].InStack ) // upvalue refers to local variable
 					ncl.Upvals[i] = F_FindUpval(

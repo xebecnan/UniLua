@@ -8,7 +8,7 @@ using System.Collections.Generic;
 namespace UniLua
 {
 	using InstructionPtr = Pointer<Instruction>;
-	using Debug = UniLua.Tools.Debug;
+	using ULDebug = UniLua.Tools.ULDebug;
 
 	public struct Pointer<T>
 	{
@@ -210,8 +210,8 @@ namespace UniLua
 		private void ApiIncrTop()
 		{
 			StkId.inc(ref Top);
-			// Debug.Log( "[ApiIncrTop] ==== Top.Index:" + Top.Index );
-			// Debug.Log( "[ApiIncrTop] ==== CI.Top.Index:" + CI.Top.Index );
+			// ULDebug.Log( "[ApiIncrTop] ==== Top.Index:" + Top.Index );
+			// ULDebug.Log( "[ApiIncrTop] ==== CI.Top.Index:" + CI.Top.Index );
 			Utl.ApiCheck( Top.Index <= CI.TopIndex, "stack overflow" );
 		}
 
@@ -291,7 +291,7 @@ namespace UniLua
 		public void DumpStack( int baseIndex, string tag="" )
 		{
 #if ENABLE_DUMP_STACK
-			Debug.Log(DumpStackToString(baseIndex, tag));
+			ULDebug.Log(DumpStackToString(baseIndex, tag));
 #endif
 		}
 

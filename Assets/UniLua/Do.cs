@@ -4,7 +4,7 @@
 
 namespace UniLua
 {
-	using Debug = UniLua.Tools.Debug;
+	using ULDebug = UniLua.Tools.ULDebug;
 	using InstructionPtr = Pointer<Instruction>;
 	using Exception = System.Exception;
 
@@ -111,7 +111,7 @@ namespace UniLua
 			// prepare for Lua call
 
 #if DEBUG_D_PRE_CALL
-			Debug.Log( "============================ D_PreCall func:" + func );
+			ULDebug.Log( "============================ D_PreCall func:" + func );
 #endif
 
 			int funcIndex = func.Index;
@@ -129,7 +129,7 @@ namespace UniLua
 				Utl.Assert(cl != null);
 				var p = cl.Proto;
 
-				D_CheckStack(p.MaxStackSize);
+				D_CheckStack(p.MaxStackSize + p.NumParams);
 				func = Stack[funcIndex];
 
 				// 补全参数
@@ -187,9 +187,9 @@ namespace UniLua
 			int wanted = CI.NumResults;
 
 #if DEBUG_D_POS_CALL
-			Debug.Log( "[D] ==== PosCall enter" );
-			Debug.Log( "[D] ==== PosCall res:" + res );
-			Debug.Log( "[D] ==== PosCall wanted:" + wanted );
+			ULDebug.Log( "[D] ==== PosCall enter" );
+			ULDebug.Log( "[D] ==== PosCall res:" + res );
+			ULDebug.Log( "[D] ==== PosCall wanted:" + wanted );
 #endif
 
 			CI = BaseCI[CI.Index-1];
@@ -198,21 +198,21 @@ namespace UniLua
 			for( ; i!=0 && firstResultIndex < Top.Index; --i )
 			{
 #if DEBUG_D_POS_CALL
-				Debug.Log( "[D] ==== PosCall assign lhs res:" + res );
-				Debug.Log( "[D] ==== PosCall assign rhs firstResult:" + firstResult );
+				ULDebug.Log( "[D] ==== PosCall assign lhs res:" + res );
+				ULDebug.Log( "[D] ==== PosCall assign rhs firstResult:" + firstResult );
 #endif
 				Stack[resIndex++].V.SetObj(ref Stack[firstResultIndex++].V);
 			}
 			while( i-- > 0 )
 			{
 #if DEBUG_D_POS_CALL
-				Debug.Log( "[D] ==== PosCall new LuaNil()" );
+				ULDebug.Log( "[D] ==== PosCall new LuaNil()" );
 #endif
 				Stack[resIndex++].V.SetNilValue();
 			}
 			Top = Stack[resIndex];
 #if DEBUG_D_POS_CALL
-			Debug.Log( "[D] ==== PosCall return " + (wanted - LuaDef.LUA_MULTRET) );
+			ULDebug.Log( "[D] ==== PosCall return " + (wanted - LuaDef.LUA_MULTRET) );
 #endif
 			return (wanted - LuaDef.LUA_MULTRET);
 		}

@@ -4,7 +4,6 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 
-using Debug = UniLua.Tools.Debug;
 using NumberStyles = System.Globalization.NumberStyles;
 
 namespace UniLua
@@ -272,7 +271,6 @@ namespace UniLua
             {
                 Token = _Lex();
             }
-			// Debug.Log("Next:" + Token );
         }
 
 		public Token GetLookAhead()
