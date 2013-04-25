@@ -116,3 +116,83 @@ private void CallMethod( int funcRef )
 	}
 }
 </pre>
+
+### 从 Lua 调用 C# 函数 ( 使用 C# 来扩展 Lua 功能 ) ###
+
+目前的示例程序是使用 FFI 库来实现的 从 Lua 调用 C# 函数。
+FFI 因为用到了反射机制来调用 C# 函数，性能会比较低。
+应该尽量避免使用，如果没有找到更好的办法，准备之后把这个FFI实现废弃掉。
+其实直接用 C# 实现一个库的形式，来让 lua 调用这种传统的做法效率会比较高，也是推荐采用的方式。而且也并不会麻烦太多。
+
+比如我现在要实现一个叫 libfoo 的库, 里面提供两个方法: add(a, b) 和 sub(a, b)
+
+库的实现
+
+<pre>
+using UniLua;
+public static class LibFoo
+{
+    public const string LIB_NAME = "libfoo.cs"; // 库的名称, 可以是任意字符串
+    
+    public static int OpenLib(ILuaState lua) // 库的初始化函数
+    {
+        var define = new NameFuncPair[]
+        {
+            new NameFuncPair("add", Add),
+            new NameFuncPair("sub", Sub),
+        };
+        
+        lua.L_NewLib(define);
+        return 1;
+    }
+    
+    public static int Add(ILuaState lua)
+    {
+        var a = lua.L_CheckNumber( 1 ); // 第一个参数
+        var b = lua.L_CheckNumber( 2 ); // 第二个参数
+        var c = a + b; // 执行加法操作
+        lua.PushNumber( c ); // 将返回值入栈
+        return 1; // 有一个返回值
+    }
+    
+    public static int Sub(ILuaState lua)
+    {
+        var a = lua.L_CheckNumber( 1 ); // 第一个参数
+        var b = lua.L_CheckNumber( 2 ); // 第二个参数
+        var c = a - b; // 执行减法操作
+        lua.PushNumber( c ); // 将返回值入栈
+        return 1; // 有一个返回值
+    }
+}
+
+</pre>
+
+库的初始化
+
+<pre>
+
+// 创建 Lua 虚拟机
+var Lua = LuaAPI.NewState();
+
+// 加载基本库
+Lua.L_OpenLibs();
+
+Lua.L_RequreF( LibFoo.LIB_NAME  // 库的名字
+             , LibFoo.OpenLib   // 库的初始化函数
+             , false            // 不默认放到全局命名空间 (在需要的地方用require获取)
+             );
+
+</pre>
+
+库的使用 (在 lua 代码中)
+
+<pre>
+
+// 获取库
+local libfoo = require "libfoo.cs"
+
+// 调用库的方法
+print(libfoo.add(42, 1))
+print(libfoo.sub(42, 22))
+
+</pre>
