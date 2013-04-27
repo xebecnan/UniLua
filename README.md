@@ -38,6 +38,15 @@ You can use WSAD keys to control the icon in this sample project.
 
 ## 一些简单的说明 ##
 
+大部分的使用是可以参考标准的 Lua 官方文档和 Lua 教程的。
+Lua 本身的语法是一样的。C API 和 C# API 之间有个对应关系。
+例如 lua_pushnumber() 这个 C API 对应到 UniLua 里就是 lua.PushNumber()
+
+所有标准 lua 中 lua.h 和 lauxlib.h 里定义的接口，都对应 <a href="https://github.com/xebecnan/UniLua/blob/master/Assets/UniLua/LuaAPI.cs">LuaAPI.cs</a> 里定义的 ILuaAPI 和 <a href="https://github.com/xebecnan/UniLua/blob/master/Assets/UniLua/LuaAuxLib.cs">LuaAuxLib.cs</a> 里定义的 ILuaAuxLib 接口。
+
+
+### 从 C# 调用 Lua ###
+
 最朴素的从 C# 调用 lua 的一个全局函数的写法:
 
 <pre>
