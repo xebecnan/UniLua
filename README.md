@@ -186,10 +186,10 @@ var Lua = LuaAPI.NewState();
 // 加载基本库
 Lua.L_OpenLibs();
 
-Lua.L_RequreF( LibFoo.LIB_NAME  // 库的名字
-             , LibFoo.OpenLib   // 库的初始化函数
-             , false            // 不默认放到全局命名空间 (在需要的地方用require获取)
-             );
+Lua.L_RequireF( LibFoo.LIB_NAME  // 库的名字
+              , LibFoo.OpenLib   // 库的初始化函数
+              , false            // 不默认放到全局命名空间 (在需要的地方用require获取)
+              );
 
 </pre>
 
