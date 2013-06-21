@@ -205,3 +205,20 @@ print(libfoo.add(42, 1))
 print(libfoo.sub(42, 22))
 
 </pre>
+
+### UTF-8 support ###
+
+C# 采用 UTF-16 作为字符串的内部编码，而 Lua 本身没有实现比较完善的编码支持。
+为了处理这个问题，我实现了一个简单的编码库 enc lib。使用方法如下：
+
+<pre>
+-- Assuming your source code is in utf-8.
+-- convert from utf-8:
+local utf8_str = '测试字符串'
+local print_safe_str = enc.decode(utf8_str, 'utf8')
+print(print_safe_str)
+
+-- convert to utf-8:
+local original_str = enc.encode(print_safe_str, 'utf8')
+assert(utf8_str == original_str)
+</pre>
