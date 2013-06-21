@@ -36,7 +36,7 @@ namespace UniLua
 			var sb = new StringBuilder();
 			foreach( var b in bytes )
 			{
-				sb.Append( b );
+				sb.Append( (char)b );
 			}
 			lua.PushString( sb.ToString() );
 			return 1;

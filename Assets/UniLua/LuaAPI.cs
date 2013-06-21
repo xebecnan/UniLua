@@ -16,7 +16,6 @@ namespace UniLua
 		LuaState NewThread();
 
 		ThreadStatus Load( ILoadInfo loadinfo, string name, string mode );
-		// ThreadStatus LoadBinary( byte[] bytes );
 		DumpStatus Dump( LuaWriter writeFunc );
 
 		ThreadStatus GetContext( out int context );
@@ -114,7 +113,6 @@ namespace UniLua
 
 		ThreadStatus	Status { get; }
 
-		// void 	DebugRawGetI( int index, int n );
 		string 	DebugGetInstructionHistory();
 	}
 

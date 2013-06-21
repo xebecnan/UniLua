@@ -113,3 +113,4 @@ UpgradeLog*.XML
 /Assembly-CSharp.pidb
 /*.sln
 /*.userprefs
+/Temp

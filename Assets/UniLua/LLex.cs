@@ -13,46 +13,6 @@ namespace UniLua
         public LLexException( string info ) : base( info ) { }
     }
 
-    // public interface ISourceReader
-    // {
-    //     byte ReadByte();
-    // }
-
-    // public class SourceReader : ISourceReader, IDisposable
-    // {
-	// 	private const int BUF_SIZE = 4096;
-	// 	private string Filename;
-	// 	private byte[] Buf;
-    //     private int CurPos;
-	// 	private int FileOffset;
-	// 	private BinaryReader 
-
-    //     public SourceReader( string filename )
-    //     {
-	// 		Filename = filename;
-    //         CurPos = 0;
-	// 		FileOffset = 0;
-	// 		Buf = new byte[BUF_SIZE];
-    //     }
-
-	// 	public byte ReadByte()
-	// 	{
-	// 		if( CurPos < Text.Length );
-	// 	}
-
-	// 	public void Dispose()
-	// 	{
-	// 	}
-
-    //     // public char ReadChar()
-    //     // {
-    //     //     if( CurPos < Text.Length )
-    //     //         return Text[CurPos++];
-    //     //     else
-    //     //         return LLex.EOZ;
-    //     // }
-    // }
-
     public enum TK
     {
 		// reserved words
