@@ -652,7 +652,8 @@ namespace UniLua
 						int n = lua.L_CheckInteger(arg);
 						lua.L_ArgCheck( n >= 0, arg,
 							"not a non-negative number is proper range" );
-						sb.Append( string.Format("{0:x}", n) );
+						// sb.Append( string.Format("{0:x}", n) );
+						sb.AppendFormat("{0:x}", n);
 						break;
 					}
 					case 'X':
@@ -660,19 +661,38 @@ namespace UniLua
 						int n = lua.L_CheckInteger(arg);
 						lua.L_ArgCheck( n >= 0, arg,
 							"not a non-negative number is proper range" );
-						sb.Append( string.Format("{0:X}", n) );
+						// sb.Append( string.Format("{0:X}", n) );
+						sb.AppendFormat("{0:X}", n);
 						break;
 					}
-					case 'e':  case 'E': case 'f':
+					case 'e':  case 'E':
+					{
+						sb.AppendFormat("{0:E}", lua.L_CheckNumber(arg));
+						break;
+					}
+					case 'f':
+					{
+						sb.AppendFormat("{0:F}", lua.L_CheckNumber(arg));
+						break;
+					}
 #if LUA_USE_AFORMAT
 					case 'a': case 'A':
 #endif
 					case 'g': case 'G':
-						throw new System.NotImplementedException();
+					{
+						sb.AppendFormat("{0:G}", lua.L_CheckNumber(arg));
+						break;
+					}
 					case 'q':
-						throw new System.NotImplementedException();
+					{
+						AddQuoted(lua, sb, arg);
+						break;
+					}
 					case 's':
-						throw new System.NotImplementedException();
+					{
+						sb.Append(lua.L_CheckString(arg));
+						break;
+					}
 					default: // also treat cases `pnLlh'
 					{
 						return lua.L_Error( "invalid option '{0}' to 'format'",
@@ -682,6 +702,30 @@ namespace UniLua
 			}
 			lua.PushString( sb.ToString() );
 			return 1;
+		}
+
+		private static void AddQuoted(ILuaState lua, StringBuilder sb, int arg)
+		{
+			var s = lua.L_CheckString(arg);
+			sb.Append('"');
+			for(var i=0; i<s.Length; ++i) {
+				var c = s[i];
+				if(c == '"' || c == '\\' || c == '\n') {
+					sb.Append('\\').Append(c);
+				}
+				else if(c == '\0' || Char.IsControl(c)) {
+					if(i+1>=s.Length || !Char.IsDigit(s[i+1])) {
+						sb.AppendFormat("\\{0:D}", (int)c);
+					}
+					else {
+						sb.AppendFormat("\\{0:D3}", (int)c);
+					}
+				}
+				else {
+					sb.Append(c);
+				}
+			}
+			sb.Append('"');
 		}
 
 		private static int GmatchAux( ILuaState lua )
