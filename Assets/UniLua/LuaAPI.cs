@@ -199,7 +199,7 @@ namespace UniLua
 
 		private void CheckMode( string given, string expected )
 		{
-			if( given != null && given != expected )
+			if( given != null && given.IndexOf(expected[0]) == -1 )
 			{
 				O_PushString( string.Format(
 					"attempt to load a {0} chunk (mode is '{1}')",
