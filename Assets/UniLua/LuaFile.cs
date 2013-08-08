@@ -81,10 +81,10 @@ namespace UniLua
 
 		private int SkipBOM()
 		{
-			foreach( var b in UTF8_BOM )
+			for( var i=0; i<UTF8_BOM.Length; ++i )
 			{
 				var c = Stream.ReadByte();
-				if(c == -1 || c != b)
+				if(c == -1 || c != (byte)UTF8_BOM[i])
 					return c;
 				Save( (byte)c );
 			}

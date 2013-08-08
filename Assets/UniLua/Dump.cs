@@ -49,8 +49,8 @@ namespace UniLua
 			var bytes = new byte[LUAC_HEADERSIZE];
 			int i = 0;
 
-			foreach( var b in LuaConf.LUA_SIGNATURE )
-				bytes[i++] = (byte)b;
+			for(var j=0; j<LuaConf.LUA_SIGNATURE.Length; ++j)
+				bytes[i++] = (byte)LuaConf.LUA_SIGNATURE[j];
 
 			bytes[i++] = (byte)VERSION;
 			bytes[i++] = (byte)FORMAT;
@@ -61,8 +61,8 @@ namespace UniLua
 			bytes[i++] = (byte)sizeof(double); // sizeof(lua_Number)
 			bytes[i++] = (byte)0; // is lua_Number integral?
 
-			foreach( var b in LUAC_TAIL )
-				bytes[i++] = (byte)b;
+			for(var j=0; j<LUAC_TAIL.Length; ++j)
+				bytes[i++] = (byte)LUAC_TAIL[j];
 
 			return bytes;
 		}
@@ -97,8 +97,8 @@ namespace UniLua
 			else
 			{
 				DumpUInt( (uint)(value.Length + 1) );
-				foreach( var b in value )
-					DumpByte( (byte)b );
+				for(var i=0; i<value.Length; ++i)
+					DumpByte( (byte)value[i] );
 				DumpByte( (byte)'\0' );
 			}
 		}
@@ -195,9 +195,9 @@ namespace UniLua
 			else
 			{
 				DumpInt( list.Count );
-				foreach( var item in list )
+				for( var i=0; i<list.Count; ++i )
 				{
-					dumpItem( item );
+					dumpItem( list[i] );
 				}
 			}
 		}

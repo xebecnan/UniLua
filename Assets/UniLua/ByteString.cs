@@ -18,12 +18,15 @@ namespace UniLua
 
 			var result = new char[TotalLength];
 			var i = 0;
-			foreach( var buf in BufList )
+			var node = BufList.First;
+			while(node != null)
 			{
-				foreach( var b in buf )
+				var buf = node.Value;
+				for(var j=0; j<buf.Length; ++j)
 				{
-					result[i++] = (char)b;
+					result[i++] = (char)buf[j];
 				}
+				node = node.Next;
 			}
 			return new string(result);
 		}

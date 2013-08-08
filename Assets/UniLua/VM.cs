@@ -170,9 +170,9 @@ newframe:
 						ra.V.SetObj(ref cl.Upvals[b].V.V);
 						
 #if DEBUG_OP_GETUPVAL
-						// foreach( var upval in cl.Upvals )
+						// for( var j=0; j<cl.Upvals.Length; ++j)
 						// {
-						// 	ULDebug.Log("[VM] ==== GETUPVAL upval:" + upval );
+						// 	ULDebug.Log("[VM] ==== GETUPVAL upval:" + cl.Upvals[j] );
 						// }
 						ULDebug.Log( "[VM] ==== GETUPVAL b:" + b );
 						ULDebug.Log( "[VM] ==== GETUPVAL ra:" + ra );

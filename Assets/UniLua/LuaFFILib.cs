@@ -293,9 +293,9 @@ namespace UniLua
 		private static Type FindTypeInAllAssemblies(string typename)
 		{
 			Type result = null;
-			foreach( var assembly in AssemblyList )
+			for( var i=0; i<AssemblyList.Count; ++i )
 			{
-				var t = assembly.GetType( typename );
+				var t = AssemblyList[i].GetType( typename );
 				if( t != null )
 				{
 					if(result == null) {
@@ -315,9 +315,9 @@ namespace UniLua
 			if( result != null )
 				return result;
 
-			foreach( var ns in UsingList )
+			for( var i=0; i<UsingList.Count; ++i )
 			{
-				var fullname = ns + "." + typename;
+				var fullname = UsingList[i] + "." + typename;
 				result = FindTypeInAllAssemblies( fullname );
 				if( result != null )
 					return result;

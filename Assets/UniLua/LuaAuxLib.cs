@@ -572,9 +572,9 @@ namespace UniLua
 				new NameFuncPair( LuaEncLib.LIB_NAME,	LuaEncLib.OpenLib	),
 			};
 
-			foreach( var pair in define )
+			for( var i=0; i<define.Length; ++i)
 			{
-				L_RequireF( pair.Name, pair.Func, true );
+				L_RequireF( define[i].Name, define[i].Func, true );
 				API.Pop( 1 );
 			}
 
@@ -628,12 +628,12 @@ namespace UniLua
 		{
 			// TODO: Check Version
 			L_CheckStack(nup, "too many upvalues");
-			foreach( var pair in define )
+			for( var j=0; j<define.Length; ++j )
 			{
 				for( int i=0; i<nup; ++i )
 					API.PushValue( -nup );
-				API.PushCSharpClosure( pair.Func, nup );
-				API.SetField( -(nup + 2), pair.Name );
+				API.PushCSharpClosure( define[j].Func, nup );
+				API.SetField( -(nup + 2), define[j].Name );
 			}
 			API.Pop( nup );
 		}

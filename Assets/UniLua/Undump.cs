@@ -55,9 +55,9 @@ namespace UniLua
 #if DEBUG_BINARY_READER
 			var sb = new System.Text.StringBuilder();
 			sb.Append("ReadBytes:");
-			foreach( var b in ret )
+			for( var i=0; i<ret.Length; ++i )
 			{
-				sb.Append( string.Format(" {0:X02}", b) );
+				sb.Append( string.Format(" {0:X02}", ret[i]) );
 			}
 			ULDebug.Log( sb.ToString() );
 #endif

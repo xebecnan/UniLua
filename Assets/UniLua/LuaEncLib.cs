@@ -34,9 +34,9 @@ namespace UniLua
 
 			var bytes = Encoding.UTF8.GetBytes(s);
 			var sb = new StringBuilder();
-			foreach( var b in bytes )
+			for( var i=0; i<bytes.Length; ++i )
 			{
-				sb.Append( (char)b );
+				sb.Append( (char)bytes[i] );
 			}
 			lua.PushString( sb.ToString() );
 			return 1;
