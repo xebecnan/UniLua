@@ -563,6 +563,7 @@ namespace UniLua
 				new NameFuncPair( LuaCoroLib.LIB_NAME,	LuaCoroLib.OpenLib  ),
 				new NameFuncPair( LuaTableLib.LIB_NAME,	LuaTableLib.OpenLib ),
 				new NameFuncPair( LuaIOLib.LIB_NAME,	LuaIOLib.OpenLib	),
+				new NameFuncPair( LuaOSLib.LIB_NAME,	LuaOSLib.OpenLib	),
 				// {LUA_OSLIBNAME, luaopen_os},
 				new NameFuncPair( LuaStrLib.LIB_NAME, 	LuaStrLib.OpenLib   ),
 				new NameFuncPair( LuaBitLib.LIB_NAME, 	LuaBitLib.OpenLib   ),
