@@ -13,14 +13,14 @@ namespace UniLua
 		public static FileLoadInfo OpenFile( string filename )
 		{
 			var path = LUA_ROOT + filename;
-			return new FileLoadInfo( File.Open( path, FileMode.Open ) );
+			return new FileLoadInfo( File.Open( path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite ) );
 		}
 
 		public static bool Readable( string filename )
 		{
 			var path = LUA_ROOT + filename;
 			try {
-				using( var stream = File.Open( path, FileMode.Open ) ) {
+				using( var stream = File.Open( path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite ) ) {
 					return true;
 				}
 			}
@@ -81,10 +81,10 @@ namespace UniLua
 
 		private int SkipBOM()
 		{
-			foreach( var b in UTF8_BOM )
+			for( var i=0; i<UTF8_BOM.Length; ++i )
 			{
 				var c = Stream.ReadByte();
-				if(c == -1 || c != b)
+				if(c == -1 || c != (byte)UTF8_BOM[i])
 					return c;
 				Save( (byte)c );
 			}

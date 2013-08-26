@@ -49,8 +49,8 @@ namespace UniLua
 			var bytes = new byte[LUAC_HEADERSIZE];
 			int i = 0;
 
-			foreach( var b in LuaConf.LUA_SIGNATURE )
-				bytes[i++] = (byte)b;
+			for(var j=0; j<LuaConf.LUA_SIGNATURE.Length; ++j)
+				bytes[i++] = (byte)LuaConf.LUA_SIGNATURE[j];
 
 			bytes[i++] = (byte)VERSION;
 			bytes[i++] = (byte)FORMAT;
@@ -61,8 +61,8 @@ namespace UniLua
 			bytes[i++] = (byte)sizeof(double); // sizeof(lua_Number)
 			bytes[i++] = (byte)0; // is lua_Number integral?
 
-			foreach( var b in LUAC_TAIL )
-				bytes[i++] = (byte)b;
+			for(var j=0; j<LUAC_TAIL.Length; ++j)
+				bytes[i++] = (byte)LUAC_TAIL[j];
 
 			return bytes;
 		}
@@ -78,11 +78,6 @@ namespace UniLua
 			DumpByte( value ? (byte)1 : (byte) 0 );
 		}
 
-		private void DumpLuaBoolean( LuaBoolean value )
-		{
-			DumpBool( value.Value );
-		}
-
 		private void DumpInt( int value )
 		{
 			DumpBlock( BitConverter.GetBytes( value ) );
@@ -91,11 +86,6 @@ namespace UniLua
 		private void DumpUInt( uint value )
 		{
 			DumpBlock( BitConverter.GetBytes( value ) );
-		}
-
-		private void DumpLuaNumber( LuaNumber value )
-		{
-			DumpBlock( BitConverter.GetBytes( value.Value ) );
 		}
 
 		private void DumpString( string value )
@@ -107,20 +97,10 @@ namespace UniLua
 			else
 			{
 				DumpUInt( (uint)(value.Length + 1) );
-				foreach( var b in value )
-					DumpByte( (byte)b );
+				for(var i=0; i<value.Length; ++i)
+					DumpByte( (byte)value[i] );
 				DumpByte( (byte)'\0' );
-
-				// DumpUInt( (uint)(bytes.Length + 1) );
-				// var bytes = Encoding.ASCII.GetBytes( value );
-				// DumpBlock( bytes );
-				// DumpByte( (byte)'\0' );
 			}
-		}
-
-		private void DumpLuaString( LuaString value )
-		{
-			DumpString( value.Value );
 		}
 
 		private void DumpByte( byte value )
@@ -139,20 +119,20 @@ namespace UniLua
 		private void DumpConstants( LuaProto proto )
 		{
 			DumpVector( proto.K, (k) => {
-				var t = k.LuaType;
+				var t = k.V.Tt;
 				DumpByte( (byte)t );
 				switch( t )
 				{
-					case LuaType.LUA_TNIL:
+					case (int)LuaType.LUA_TNIL:
 						break;
-					case LuaType.LUA_TBOOLEAN:
-						DumpLuaBoolean( k as LuaBoolean );
+					case (int)LuaType.LUA_TBOOLEAN:
+						DumpBool(k.V.BValue());
 						break;
-					case LuaType.LUA_TNUMBER:
-						DumpLuaNumber( k as LuaNumber );
+					case (int)LuaType.LUA_TNUMBER:
+						DumpBlock( BitConverter.GetBytes(k.V.NValue) );
 						break;
-					case LuaType.LUA_TSTRING:
-						DumpLuaString( k as LuaString );
+					case (int)LuaType.LUA_TSTRING:
+						DumpString(k.V.SValue());
 						break;
 					default:
 						Utl.Assert(false);
@@ -215,9 +195,9 @@ namespace UniLua
 			else
 			{
 				DumpInt( list.Count );
-				foreach( var item in list )
+				for( var i=0; i<list.Count; ++i )
 				{
-					dumpItem( item );
+					dumpItem( list[i] );
 				}
 			}
 		}

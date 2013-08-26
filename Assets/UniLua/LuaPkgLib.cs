@@ -173,7 +173,7 @@ namespace UniLua
 			//
 			// 下面的代码在编辑器中可以运行, 但是 build 后运行时会 crash
 			// var pgs = System.Diagnostics.Process.GetCurrentProcess();
-			// Debug.Log( pgs.MainModule.FileName );
+			// ULDebug.Log( pgs.MainModule.FileName );
 		}
 
 		private static int SearcherPreload( ILuaState lua )

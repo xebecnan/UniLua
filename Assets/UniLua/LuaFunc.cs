@@ -3,18 +3,17 @@
 
 using System.Collections.Generic;
 
-using Debug = UniLua.Tools.Debug;
+using ULDebug = UniLua.Tools.ULDebug;
 
 namespace UniLua
 {
-
 	public partial class LuaState
 	{
 
 		private LuaUpvalue F_FindUpval( StkId level )
 		{
 #if DEBUG_FIND_UPVALUE
-			Debug.Log( "[F_FindUpval] >>>>>>>>>>>>>>>>>>>> level:" + level );
+			ULDebug.Log( "[F_FindUpval] >>>>>>>>>>>>>>>>>>>> level:" + level );
 #endif
 
 			var node = OpenUpval.First;
@@ -23,13 +22,13 @@ namespace UniLua
 			{
 				var upval = node.Value;
 #if DEBUG_FIND_UPVALUE
-				Debug.Log("[F_FindUpval] >>>>>>>>>>>>>>>>>>>> upval.V:" + upval.V );
+				ULDebug.Log("[F_FindUpval] >>>>>>>>>>>>>>>>>>>> upval.V:" + upval.V );
 #endif
-				if( upval.V.Index < level.Index )
+				if(upval.V.Index < level.Index)
 					break;
 
 				var next = node.Next;
-				if( upval.V.Value == level.Value )
+				if(upval.V == level)
 					return upval;
 
 				prev = node;
@@ -50,7 +49,7 @@ namespace UniLua
 				OpenUpval.AddAfter( prev, ret );
 
 #if DEBUG_FIND_UPVALUE
-			Debug.Log("[F_FindUpval] >>>>>>>>>>>>>>>>>>>> create new one:" + ret.V );
+			ULDebug.Log("[F_FindUpval] >>>>>>>>>>>>>>>>>>>> create new one:" + ret.V );
 #endif
 
 			return ret;
@@ -69,8 +68,8 @@ namespace UniLua
 				OpenUpval.Remove( node );
 				node = next;
 
-				upval.Value[0] = upval.V.Value;
-				upval.V = new StkId( upval.Value, 0 );
+				upval.Value.V.SetObj(ref upval.V.V);
+				upval.V = upval.Value;
 			}
 		}
 

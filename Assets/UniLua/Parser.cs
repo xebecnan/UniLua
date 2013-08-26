@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 
-using Debug = UniLua.Tools.Debug;
+using ULDebug = UniLua.Tools.ULDebug;
 
 namespace UniLua
 {
@@ -17,7 +17,7 @@ namespace UniLua
 		public LuaState State;
 		public LLex		Lexer;
 
-		public Dictionary<LuaObject, int> H;
+		public Dictionary<TValue, int> H;
 
 		public int NumActVar;
 		public int FreeReg;
@@ -30,7 +30,7 @@ namespace UniLua
 		public FuncState()
 		{
 			Proto = new LuaProto();
-			H = new Dictionary<LuaObject, int>();
+			H = new Dictionary<TValue, int>();
 			NumActVar = 0;
 			FreeReg = 0;
 		}
@@ -1118,7 +1118,7 @@ namespace UniLua
 
 		private void Statement()
 		{
-			// Debug.Log("Statement ::" + Lexer.Token);
+			// ULDebug.Log("Statement ::" + Lexer.Token);
 			int line = Lexer.LineNumber;
 			EnterLevel();
 			switch( Lexer.Token.TokenType )
@@ -1205,9 +1205,9 @@ namespace UniLua
 					ExprStat();
 					break;
 			}
-			// Debug.Log( "MaxStackSize: " + CurFunc.Proto.MaxStackSize );
-			// Debug.Log( "FreeReg: " + CurFunc.FreeReg );
-			// Debug.Log( "NumActVar: " + CurFunc.NumActVar );
+			// ULDebug.Log( "MaxStackSize: " + CurFunc.Proto.MaxStackSize );
+			// ULDebug.Log( "FreeReg: " + CurFunc.FreeReg );
+			// ULDebug.Log( "NumActVar: " + CurFunc.NumActVar );
 			Utl.Assert( CurFunc.Proto.MaxStackSize >= CurFunc.FreeReg &&
 						CurFunc.FreeReg >= CurFunc.NumActVar );
 			CurFunc.FreeReg = CurFunc.NumActVar; // free registers
@@ -1216,13 +1216,13 @@ namespace UniLua
 
 		private string CheckName()
 		{
-			// Debug.Log( Lexer.Token );
+			// ULDebug.Log( Lexer.Token );
 			var t = Lexer.Token as NameToken;
 
 			// TEST CODE
 			if( t == null )
 			{
-				Debug.LogError( Lexer.LineNumber + ":" + Lexer.Token );
+				ULDebug.LogError( Lexer.LineNumber + ":" + Lexer.Token );
 			}
 			string name = t.SemInfo;
 			Lexer.Next();
@@ -1421,7 +1421,7 @@ namespace UniLua
 
 		private BinOpr SubExpr( ExpDesc e, int limit )
 		{
-			// Debug.Log("SubExpr limit:" + limit);
+			// ULDebug.Log("SubExpr limit:" + limit);
 			EnterLevel();
 			UnOpr uop = GetUnOpr( Lexer.Token.TokenType );
 			if( uop != UnOpr.NOUNOPR )
@@ -1437,7 +1437,7 @@ namespace UniLua
 			BinOpr op = GetBinOpr(Lexer.Token.TokenType );
 			while( op != BinOpr.NOBINOPR && GetBinOprLeftPrior( op ) > limit )
 			{
-				// Debug.Log("op:" + op);
+				// ULDebug.Log("op:" + op);
 				int line = Lexer.LineNumber;
 				Lexer.Next();
 				Coder.Infix( CurFunc, op, e );

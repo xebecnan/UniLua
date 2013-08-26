@@ -75,11 +75,35 @@ public class LuaScriptController : MonoBehaviour {
 	private void CallMethod( int funcRef )
 	{
 		Lua.RawGetI( LuaDef.LUA_REGISTRYINDEX, funcRef );
-		var status = Lua.PCall( 0, 0, 0 );
+
+		// insert `traceback' function
+		var b = Lua.GetTop();
+		Lua.PushCSharpFunction( Traceback );
+		Lua.Insert(b);
+
+		var status = Lua.PCall( 0, 0, b );
 		if( status != ThreadStatus.LUA_OK )
 		{
 			Debug.LogError( Lua.ToString(-1) );
 		}
+
+		// remove `traceback' function
+		Lua.Remove(b);
+	}
+
+	private static int Traceback(ILuaState lua) {
+		var msg = lua.ToString(1);
+		if(msg != null) {
+			lua.L_Traceback(lua, msg, 1);
+		}
+		// is there an error object?
+		else if(!lua.IsNoneOrNil(1)) {
+			// try its `tostring' metamethod
+			if(!lua.L_CallMeta(1, "__tostring")) {
+				lua.PushString("(no error message)");
+			}
+		}
+		return 1;
 	}
 }
 

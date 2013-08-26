@@ -53,7 +53,7 @@ namespace UniLua.Tools
 			{
 				Fatal( lua.ToString( -1 ) );
 			}
-			var cl = ((LuaState)lua).Top.Value as LuaLClosure;
+			var cl = ((LuaState)lua).Top.V.ClLValue();
 			return cl.Proto;
 		}
 

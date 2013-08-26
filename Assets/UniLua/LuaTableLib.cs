@@ -161,7 +161,7 @@ namespace UniLua
 			int e = lua.L_Opt( lua.L_CheckInteger, 3, lua.L_Len(1) );
 			if( i > e ) return 0; // empty range
 			int n = e - i + 1; // number of elements
-			if( n <= 0 ) // n <= 0 means arith. overflow
+			if( n <= 0 || !lua.CheckStack(n) ) // n <= 0 means arith. overflow
 				return lua.L_Error( "too many results to unpack" );
 			lua.RawGetI( 1, i ); // push arg[i] (avoiding overflow problems
 			while( i++ < e ) // push arg[i + 1...e]
@@ -267,6 +267,7 @@ namespace UniLua
 		private static int TBL_Sort( ILuaState lua )
 		{
 			int n = AuxGetN(lua, 1);
+			lua.L_CheckStack(40, "");  /* assume array is smaller than 2^40 */
 			if (!lua.IsNoneOrNil(2))  /* is there a 2nd argument? */
 				lua.L_CheckType( 2, LuaType.LUA_TFUNCTION );
 			lua.SetTop(2);  /* make sure there is two arguments */

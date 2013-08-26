@@ -1,122 +1,248 @@
 ﻿
+// #define DEBUG_DUMMY_TVALUE_MODIFY
+
 namespace UniLua
 {
 	using System;
 	using System.Collections.Generic;
-	using Debug = UniLua.Tools.Debug;
+	using ULDebug = UniLua.Tools.ULDebug;
 
-	public abstract class LuaObject
+	public struct TValue
 	{
-		public virtual string ToLiteral()
-		{
-			return ToString();
-		}
+		private const UInt64 CLOSURE_LUA = 0; // lua closure
+		private const UInt64 CLOSURE_CS = 1; // c# closure
+		private const UInt64 CLOSURE_LCS = 2; // light c# closure
 
-		public virtual double ToNumber( out bool isnum )
-		{
-			isnum = false;
-			return 0.0;
-		}
+		private const UInt64 BOOLEAN_FALSE = 0;
+		private const UInt64 BOOLEAN_TRUE = 1;
 
-		public virtual LuaType LuaType
-		{
-			get { return LuaType.LUA_TNONE; }
-		}
-
-		public static bool operator ==( LuaObject lhs, LuaObject rhs )
-		{
-			if( System.Object.ReferenceEquals( lhs, rhs ) )
-				return true;
-
-			if( ((object)lhs == null) || ((object)rhs == null) )
-				return false;
-			
-			return lhs.Equals( rhs );
-		}
-
-		public static bool operator !=( LuaObject lhs, LuaObject rhs )
-		{
-			return !(lhs == rhs);
-		}
-
-		public override bool Equals( object o )
-		{
-			if( !(o is LuaObject) )
-				return false;
-
-			return System.Object.ReferenceEquals( this, o );
-		}
+		public int Tt;
+		public double NValue;
+		public UInt64 UInt64Value;
+		public object OValue;
+#if DEBUG_DUMMY_TVALUE_MODIFY
+		public bool Lock_;
+#endif
 
 		public override int GetHashCode()
 		{
-			return base.GetHashCode();
+			return Tt.GetHashCode() ^ NValue.GetHashCode()
+				^ UInt64Value.GetHashCode()
+				^ (OValue != null ? OValue.GetHashCode() : 0x12345678);
+		}
+		public override bool Equals(object o)
+		{
+			if(!(o is TValue)) return false;
+			return Equals((TValue)o);
+		}
+		public bool Equals(TValue o)
+		{
+			if(Tt != o.Tt || NValue != o.NValue || UInt64Value != o.UInt64Value)
+				{ return false; }
+
+			switch(Tt) {
+				case (int)LuaType.LUA_TNIL: return true;
+				case (int)LuaType.LUA_TBOOLEAN: return BValue() == o.BValue();
+				case (int)LuaType.LUA_TNUMBER: return NValue == o.NValue;
+				case (int)LuaType.LUA_TUINT64: return UInt64Value == o.UInt64Value;
+				case (int)LuaType.LUA_TSTRING: return SValue() == o.SValue();
+				default: return System.Object.ReferenceEquals(OValue, o.OValue);
+			}
+		}
+		public static bool operator==(TValue lhs, TValue rhs)
+		{
+			return lhs.Equals(rhs);
+		}
+		public static bool operator!=(TValue lhs, TValue rhs)
+		{
+			return !lhs.Equals(rhs);
 		}
 
-		public virtual bool IsNil		{ get { return false; } }
-		public virtual bool IsFalse		{ get { return false; } }
-		public virtual bool IsFunction	{ get { return false; } }
-		public virtual bool IsClosure	{ get { return false; } }
-		public virtual bool IsString	{ get { return false; } }
-		public virtual bool IsNumber	{ get { return false; } }
-		public virtual bool IsTable		{ get { return false; } }
-		public virtual bool IsThread	{ get { return false; } }
+#if DEBUG_DUMMY_TVALUE_MODIFY
+		private void CheckLock() {
+			if(Lock_) {
+				UnityEngine.ULDebug.LogError("changing a lock value");
+			}
+		}
+#endif
+
+		internal bool TtIsNil() { return Tt == (int)LuaType.LUA_TNIL; }
+		internal bool TtIsBoolean() { return Tt == (int)LuaType.LUA_TBOOLEAN; }
+		internal bool TtIsNumber() { return Tt == (int)LuaType.LUA_TNUMBER; }
+		internal bool TtIsUInt64() { return Tt == (int)LuaType.LUA_TUINT64; }
+		internal bool TtIsString() { return Tt == (int)LuaType.LUA_TSTRING; }
+		internal bool TtIsTable() { return Tt == (int)LuaType.LUA_TTABLE; }
+		internal bool TtIsFunction() { return Tt == (int)LuaType.LUA_TFUNCTION; }
+		internal bool TtIsThread() { return Tt == (int)LuaType.LUA_TTHREAD; }
+
+		internal bool ClIsLuaClosure() { return UInt64Value == CLOSURE_LUA; }
+		internal bool ClIsCsClosure() { return UInt64Value == CLOSURE_CS; }
+		internal bool ClIsLcsClosure() { return UInt64Value == CLOSURE_LCS; }
+
+		internal bool BValue() { return UInt64Value != BOOLEAN_FALSE; }
+		internal string SValue() { return (string)OValue; }
+		internal LuaTable HValue() { return OValue as LuaTable; }
+		internal LuaLClosureValue ClLValue() { return (LuaLClosureValue)OValue; }
+		internal LuaCsClosureValue ClCsValue() { return (LuaCsClosureValue)OValue; }
+		internal LuaUserDataValue RawUValue() { return OValue as LuaUserDataValue; }
+
+		internal void SetNilValue() {
+#if DEBUG_DUMMY_TVALUE_MODIFY
+			CheckLock();
+#endif
+			Tt = (int)LuaType.LUA_TNIL;
+			NValue = 0.0;
+			UInt64Value = 0;
+			OValue = null;
+		}
+		internal void SetBValue(bool v) {
+#if DEBUG_DUMMY_TVALUE_MODIFY
+			CheckLock();
+#endif
+			Tt = (int)LuaType.LUA_TBOOLEAN;
+			NValue = 0.0;
+			UInt64Value = v ? BOOLEAN_TRUE : BOOLEAN_FALSE;
+			OValue = null;
+		}
+		internal void SetObj(ref TValue v) {
+#if DEBUG_DUMMY_TVALUE_MODIFY
+			CheckLock();
+#endif
+			Tt = v.Tt;
+			NValue = v.NValue;
+			UInt64Value = v.UInt64Value;
+			OValue = v.OValue;
+		}
+		internal void SetNValue(double v) {
+#if DEBUG_DUMMY_TVALUE_MODIFY
+			CheckLock();
+#endif
+			Tt = (int)LuaType.LUA_TNUMBER;
+			NValue = v;
+			UInt64Value = 0;
+			OValue = null;
+		}
+		internal void SetUInt64Value(UInt64 v) {
+#if DEBUG_DUMMY_TVALUE_MODIFY
+			CheckLock();
+#endif
+			Tt = (int)LuaType.LUA_TUINT64;
+			NValue = 0.0;
+			UInt64Value = v;
+			OValue = null;
+		}
+		internal void SetSValue(string v) {
+#if DEBUG_DUMMY_TVALUE_MODIFY
+			CheckLock();
+#endif
+			Tt = (int)LuaType.LUA_TSTRING;
+			NValue = 0.0;
+			UInt64Value = 0;
+			OValue = v;
+		}
+		internal void SetHValue(LuaTable v) {
+#if DEBUG_DUMMY_TVALUE_MODIFY
+			CheckLock();
+#endif
+			Tt = (int)LuaType.LUA_TTABLE;
+			NValue = 0.0;
+			UInt64Value = 0;
+			OValue = v;
+		}
+		internal void SetThValue(LuaState v) {
+#if DEBUG_DUMMY_TVALUE_MODIFY
+			CheckLock();
+#endif
+			Tt = (int)LuaType.LUA_TTHREAD;
+			NValue = 0.0;
+			UInt64Value = 0;
+			OValue = v;
+		}
+		internal void SetPValue(object v) {
+#if DEBUG_DUMMY_TVALUE_MODIFY
+			CheckLock();
+#endif
+			Tt = (int)LuaType.LUA_TLIGHTUSERDATA;
+			NValue = 0.0;
+			UInt64Value = 0;
+			OValue = v;
+		}
+		internal void SetClLValue(LuaLClosureValue v) {
+#if DEBUG_DUMMY_TVALUE_MODIFY
+			CheckLock();
+#endif
+			Tt = (int)LuaType.LUA_TFUNCTION;
+			NValue = 0.0;
+			UInt64Value = CLOSURE_LUA;
+			OValue = v;
+		}
+		internal void SetClCsValue(LuaCsClosureValue v) {
+#if DEBUG_DUMMY_TVALUE_MODIFY
+			CheckLock();
+#endif
+			Tt = (int)LuaType.LUA_TFUNCTION;
+			NValue = 0.0;
+			UInt64Value = CLOSURE_CS;
+			OValue = v;
+		}
+		internal void SetClLcsValue(CSharpFunctionDelegate v) {
+#if DEBUG_DUMMY_TVALUE_MODIFY
+			CheckLock();
+#endif
+			Tt = (int)LuaType.LUA_TFUNCTION;
+			NValue = 0.0;
+			UInt64Value = CLOSURE_LCS;
+			OValue = v;
+		}
 	}
 
-	public class LuaNil : LuaObject
+	public class StkId
 	{
-		public override LuaType LuaType
+		public TValue V;
+
+		private StkId[] List;
+		public int Index { get; private set; }
+
+		public void SetList(StkId[] list) { List = list; }
+		public void SetIndex(int index) { Index = index; }
+
+		public static StkId inc(ref StkId val)
 		{
-			get { return LuaType.LUA_TNIL; }
+			var ret = val;
+			val = val.List[val.Index+1];
+			return ret;
 		}
 
-		public override bool IsNil		{ get { return true; } }
-		public override bool IsFalse	{ get { return true; } }
-
-		public override int GetHashCode()
+		public override string ToString()
 		{
-			return 0;
-		}
-
-		public override bool Equals( object o )
-		{
-			if( o == null ) return false;
-
-			return (object)(o as LuaNil) != null;
+			string detail;
+			if(V.TtIsString())
+				{ detail = V.SValue().Replace("\n", "»"); }
+			else
+				{ detail = "..."; }
+			return string.Format("StkId - {0} - {1}", LuaState.TypeName((LuaType)V.Tt), detail);
 		}
 	}
 
-	public class LuaBoolean : LuaObject
+	public class LuaLClosureValue
 	{
-		public bool Value;
+		public LuaProto 		Proto;
+		public LuaUpvalue[]		Upvals;
 
-		public LuaBoolean( bool val )
-		{
-			Value = val;
+		public LuaLClosureValue(LuaProto p) {
+			Proto = p;
+
+			Upvals = new LuaUpvalue[p.Upvalues.Count];
+			for(int i=0; i<p.Upvalues.Count; ++i)
+				{ Upvals[i] = new LuaUpvalue(); }
 		}
-
-		public override int GetHashCode()
-		{
-			return Value.GetHashCode();
-		}
-
-		public override LuaType LuaType
-		{
-			get { return LuaType.LUA_TBOOLEAN; }
-		}
-
-		public override bool IsFalse	{ get { return !Value; } }
-
-		public override bool Equals( object o )
-		{
-			if( o == null )
-				return false;
-
-			LuaBoolean p = o as LuaBoolean;
-			if( (object)p == null )
-				return false;
-
-			return Value == p.Value;
-		}
+	}
+	
+	public class LuaUserDataValue
+	{
+		public object Value;
+		public LuaTable MetaTable;
+		public int Length;
 	}
 
 	public class LocVar
@@ -133,10 +259,10 @@ namespace UniLua
 		public bool InStack;
 	}
 
-	public class LuaProto : LuaObject
+	public class LuaProto
 	{
 		public List<Instruction> 	Code;
-		public List<LuaObject>		K;
+		public List<StkId>			K;
 		public List<LuaProto>		P;
 		public List<UpvalDesc>		Upvalues;
 
@@ -154,7 +280,7 @@ namespace UniLua
 		public LuaProto()
 		{
 			Code = new List<Instruction>();
-			K = new List<LuaObject>();
+			K = new List<StkId>();
 			P = new List<LuaProto>();
 			Upvalues = new List<UpvalDesc>();
 			LineInfo = new List<int>();
@@ -163,412 +289,50 @@ namespace UniLua
 
 		public int GetFuncLine( int pc )
 		{
-			return (pc < LineInfo.Count) ? LineInfo[pc] : 0;
-		}
-
-		public override LuaType LuaType
-		{
-			get { return LuaType.LUA_TPROTO; }
+			return (0 <= pc && pc < LineInfo.Count) ? LineInfo[pc] : 0;
 		}
 	}
 	
-	public class LuaUpvalue : LuaObject
+	public class LuaUpvalue
 	{
 		public StkId			V;
-		public List<LuaObject>	Value;
-		// public LuaUpvalue		Next;
-		// public LuaUpvalue		Prev;
+		public StkId			Value;
 
 		public LuaUpvalue()
 		{
-			Value = new List<LuaObject>(1);
-			Value.Add( new LuaNil() );
+			Value = new StkId();
+			Value.V.SetNilValue();
 
-			V = new StkId( Value, 0 );
-		}
-
-		public override string ToString()
-		{
-			return string.Format("[LuaUpvalue(self:{0} v:{1})]", V.Value == Value[0], V);
-		}
-
-		public override LuaType LuaType
-		{
-			get { return LuaType.LUA_TUPVAL; }
+			V = Value;
 		}
 	}
 
-	public abstract class LuaClosure : LuaObject
-	{
-		public abstract ClosureType ClosureType { get; }
-
-		public abstract string GetUpvalue( int n, out LuaObject val );
-
-		public abstract string SetUpvalue( int n, LuaObject val );
-	}
-
-	public class LuaLClosure : LuaClosure
-	{
-		public LuaProto 		Proto;
-		public List<LuaUpvalue>	Upvals;
-
-		public LuaLClosure( LuaProto proto )
-		{
-			Proto = proto;
-
-			Upvals = new List<LuaUpvalue>();
-			for( int i=0; i<proto.Upvalues.Count; ++i )
-			{
-				Upvals.Add( null );
-			}
-		}
-
-		public override ClosureType ClosureType { get { return ClosureType.LUA; } }
-
-		public override string ToString()
-		{
-			return string.Format("[LuaLClosure(Upvalues:{0})]", Upvals.Count);
-		}
-
-		public override LuaType LuaType
-		{
-			get { return LuaType.LUA_TFUNCTION; }
-		}
-
-		public override bool IsFunction	{ get { return true; } }
-		public override bool IsClosure	{ get { return true; } }
-
-		public override string GetUpvalue( int n, out LuaObject val )
-		{
-			if( !(1 <= n && n <= Upvals.Count) )
-			{
-				val = null;
-				return null;
-			}
-			else
-			{
-				val = Upvals[n-1].V.Value;
-				string name = Proto.Upvalues[n-1].Name;
-				return (name == null) ? "" : name;
-			}
-		}
-
-		public override string SetUpvalue( int n, LuaObject val )
-		{
-			if( !(1 <= n && n <= Upvals.Count) )
-				return null;
-			else
-			{
-				Upvals[n-1].V.Value = val;
-				string name = Proto.Upvalues[n-1].Name;
-				return (name == null) ? "" : name;
-			}
-		}
-	}
-
-	public class LuaCSharpClosure : LuaClosure
+	public class LuaCsClosureValue
 	{
 		public CSharpFunctionDelegate 	F;
-		public List<LuaObject>			Upvals;
+		public StkId[]					Upvals;
 
-		public LuaCSharpClosure( CSharpFunctionDelegate f )
+		public LuaCsClosureValue( CSharpFunctionDelegate f )
 		{
 			F = f;
 		}
 
-		public LuaCSharpClosure( CSharpFunctionDelegate f, int numUpvalues )
+		public LuaCsClosureValue( CSharpFunctionDelegate f, int numUpvalues )
 		{
 			F = f;
-			Upvals = new List<LuaObject>(numUpvalues);
-		}
-
-		public override ClosureType ClosureType { get { return ClosureType.CSHARP; } }
-
-		public override LuaType LuaType
-		{
-			get { return LuaType.LUA_TFUNCTION; }
-		}
-
-		public override bool IsFunction	{ get { return true; } }
-		public override bool IsClosure	{ get { return true; } }
-
-		public override string GetUpvalue( int n, out LuaObject val )
-		{
-			if( !(1 <= n && n <= Upvals.Count) )
-			{
-				val = null;
-				return null;
+			Upvals = new StkId[numUpvalues];
+			for(int i=0; i<numUpvalues; ++i) {
+				var newItem = new StkId();
+				Upvals[i] = newItem;
+				newItem.SetList(Upvals);
+				newItem.SetIndex(i);
 			}
-			else
-			{
-				val = Upvals[n-1];
-				return "";
-			}
-		}
-
-		public override string SetUpvalue( int n, LuaObject val )
-		{
-			if( !(1 <= n && n <= Upvals.Count) )
-				return null;
-			else
-			{
-				Upvals[n-1] = val;
-				return "";
-			}
-		}
-	}
-
-	public class LuaString : LuaObject
-	{
-		public string Value;
-
-		public LuaString( string val )
-		{
-			Value = val;
-		}
-
-		public override bool IsString	{ get { return true; } }
-
-		public override int GetHashCode()
-		{
-			return Value.GetHashCode();
-		}
-
-		public static bool operator ==( LuaString lhs, LuaString rhs )
-		{
-			if( System.Object.ReferenceEquals( lhs, rhs ) )
-				return true;
-
-			if( ((object)lhs == null) || ((object)rhs == null) )
-				return false;
-			
-			return lhs.Value == rhs.Value;
-		}
-
-		public static bool operator !=( LuaString lhs, LuaString rhs )
-		{
-			return !(lhs == rhs);
-		}
-
-		public override bool Equals( object o )
-		{
-			if( o == null )
-				return false;
-
-			LuaString p = o as LuaString;
-			if( (object)p == null )
-				return false;
-
-			return Value == p.Value;
-		}
-
-		public override string ToString()
-		{
-			return "[LuaString(" + Value + ")]";
-		}
-
-		public override LuaType LuaType
-		{
-			get { return LuaType.LUA_TSTRING; }
-		}
-
-		// public LuaNumber ToLuaNumber()
-		// {
-		// 	if( Value.Contains( "n" ) || Value.Contains( "N" ) ) // reject 'inf' and 'nan'
-		// 		return null;
-
-		// 	if( Value.Contains( 'x' ) || Value.Contains( 'X' ) ) // hexa?
-
-		// }
-	}
-
-	public class LuaUserData : LuaObject
-	{
-		public object Value;
-
-		public LuaUserData( object val )
-		{
-			Value = val;
-		}
-
-		public LuaTable MetaTable { get; set; }
-		public int Length { get { return 0; } } // TODO
-
-		public override LuaType LuaType
-		{
-			get { return LuaType.LUA_TUSERDATA; }
-		}
-	}
-
-	public class LuaLightUserData : LuaObject
-	{
-		public object Value;
-
-		public LuaLightUserData( object val )
-		{
-			Value = val;
-		}
-
-		public override LuaType LuaType
-		{
-			get { return LuaType.LUA_TLIGHTUSERDATA; }
-		}
-	}
-
-	public class LuaUInt64 : LuaObject
-	{
-		public UInt64 Value;
-
-		public LuaUInt64( UInt64 val )
-		{
-			Value = val;
-		}
-
-		public override LuaType LuaType
-		{
-			get { return LuaType.LUA_TUINT64; }
-		}
-
-		public override int GetHashCode()
-		{
-			return Value.GetHashCode();
-		}
-
-		public static bool operator ==( LuaUInt64 lhs,
-			LuaUInt64 rhs )
-		{
-			if( System.Object.ReferenceEquals( lhs, rhs ) )
-				return true;
-
-			if( ((object)lhs == null) || ((object)rhs == null) )
-				return false;
-			
-			return lhs.Value == rhs.Value;
-		}
-
-		public static bool operator !=( LuaUInt64 lhs,
-			LuaUInt64 rhs )
-		{
-			return !(lhs == rhs);
-		}
-
-		public override bool Equals( object o )
-		{
-			// UnityEngine.Debug.Log("LuaUInt64.Equals");
-			if( o == null )
-				return false;
-
-			LuaUInt64 p = o as LuaUInt64;
-			if( (object)p == null )
-				return false;
-
-			// UnityEngine.Debug.Log("this.Value:" + this.Value);
-			// UnityEngine.Debug.Log("p.Value:" + p.Value);
-			// UnityEngine.Debug.Log("this.Value == p.Value:" + (this.Value == p.Value));
-			// UnityEngine.Debug.Log("this.Value == p.Value:" + ((UInt64)this.Value == (UInt64)p.Value));
-			return Value == p.Value;
-		}
-
-		public override string ToString()
-		{
-			return "[LuaUInt64(" + Value + ")]";
-		}
-	}
-
-	public class LuaNumber : LuaObject
-	{
-		public double Value;
-
-		public LuaNumber( double val )
-		{
-			Value = val;
-		}
-
-		public override bool IsNumber	{ get { return true; } }
-
-		public override int GetHashCode()
-		{
-			return Value.GetHashCode();
-		}
-
-		public static bool operator ==( LuaNumber lhs, LuaNumber rhs )
-		{
-			if( System.Object.ReferenceEquals( lhs, rhs ) )
-				return true;
-
-			if( ((object)lhs == null) || ((object)rhs == null) )
-				return false;
-			
-			return lhs.Value == rhs.Value;
-		}
-
-		public static bool operator !=( LuaNumber lhs, LuaNumber rhs )
-		{
-			return !(lhs == rhs);
-		}
-
-		public override bool Equals( object o )
-		{
-			if( o == null )
-				return false;
-
-			LuaNumber p = o as LuaNumber;
-			if( (object)p == null )
-				return false;
-
-			return Value == p.Value;
-		}
-
-		public override string ToString()
-		{
-			return "[LuaNumber(" + Value + ")]";
-		}
-
-		public override string ToLiteral()
-		{
-			return Value.ToString();
-		}
-
-		public override double ToNumber( out bool isnum )
-		{
-			isnum = true;
-			return Value;
-		}
-
-		public static LuaNumber operator +( LuaNumber lhs, LuaNumber rhs )
-		{
-			return new LuaNumber( lhs.Value + rhs.Value );
-		}
-
-		public static LuaNumber operator -( LuaNumber lhs, LuaNumber rhs )
-		{
-			return new LuaNumber( lhs.Value - rhs.Value );
-		}
-
-		public static LuaNumber operator *( LuaNumber lhs, LuaNumber rhs )
-		{
-			return new LuaNumber( lhs.Value * rhs.Value );
-		}
-
-		public static LuaNumber operator /( LuaNumber lhs, LuaNumber rhs )
-		{
-			return new LuaNumber( lhs.Value / rhs.Value );
-		}
-
-		public override LuaType LuaType
-		{
-			get { return LuaType.LUA_TNUMBER; }
 		}
 	}
 
 	public partial class LuaState
 	{
-		public override LuaType LuaType
-		{
-			get { return LuaType.LUA_TTHREAD; }
-		}
-
-		public override bool IsThread	{ get { return true; } }
+		internal static StkId TheNilValue;
 
 		public static bool O_Str2Decimal( string s, out double result )
 		{
@@ -603,6 +367,38 @@ namespace UniLua
 				case LuaOp.LUA_OPUNM: return -v1;
 				default: throw new System.NotImplementedException();
 			}
+		}
+
+		private bool IsFalse(ref TValue v)
+		{
+			if( v.TtIsNil() )
+				return true;
+				
+			if((v.TtIsBoolean() && v.BValue() == false))
+				return true;
+
+			return false;
+		}
+
+		private bool ToString(ref TValue o)
+		{
+			if(o.TtIsString()) { return true; }
+			return V_ToString(ref o);
+		}
+
+		internal LuaLClosureValue GetCurrentLuaFunc(CallInfo ci)
+		{
+			if(ci.IsLua) {
+				return Stack[ci.FuncIndex].V.ClLValue();
+			}
+			else return null;
+		}
+
+		internal int GetCurrentLine(CallInfo ci)
+		{
+			Utl.Assert(ci.IsLua);
+			var cl = Stack[ci.FuncIndex].V.ClLValue();
+			return cl.Proto.GetFuncLine(ci.CurrentPc);
 		}
 	}
 

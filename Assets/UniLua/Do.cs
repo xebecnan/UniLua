@@ -4,7 +4,7 @@
 
 namespace UniLua
 {
-	using Debug = UniLua.Tools.Debug;
+	using ULDebug = UniLua.Tools.ULDebug;
 	using InstructionPtr = Pointer<Instruction>;
 	using Exception = System.Exception;
 
@@ -25,13 +25,13 @@ namespace UniLua
 			throw new LuaRuntimeException( errCode );
 		}
 
-		private ThreadStatus D_RawRunProtected( PFuncDelegate func, object ud )
+		private ThreadStatus D_RawRunProtected<T>( PFuncDelegate<T> func, ref T ud )
 		{
 			int oldNumCSharpCalls = NumCSharpCalls;
 			ThreadStatus res = ThreadStatus.LUA_OK;
 			try
 			{
-				func( ud );
+				func(ref ud);
 			}
 			catch( LuaRuntimeException e )
 			{
@@ -47,35 +47,35 @@ namespace UniLua
 			switch( errCode )
 			{
 				case ThreadStatus.LUA_ERRMEM: // memory error?
-					oldTop.Value = new LuaString( "not enough memory" );
+					oldTop.V.SetSValue("not enough memory");
 					break;
 
 				case ThreadStatus.LUA_ERRERR:
-					oldTop.Value = new LuaString( "error in error handling" );
+					oldTop.V.SetSValue("error in error handling");
 					break;
 
-				default:
-					oldTop.Value = (Top-1).Value; // error message on current top
+				default: // error message on current top
+					oldTop.V.SetObj(ref Stack[Top.Index-1].V);
 					break;
 			}
-			Top = oldTop + 1;
+			Top = Stack[oldTop.Index+1];
 		}
 
-		private ThreadStatus D_PCall( PFuncDelegate func, object ud,
-			StkId oldTop, int errFunc )
+		private ThreadStatus D_PCall<T>( PFuncDelegate<T> func, ref T ud,
+			int oldTopIndex, int errFunc )
 		{
-			CallInfo oldCI 			= CI;
+			int oldCIIndex 			= CI.Index;
 			bool oldAllowHook 		= AllowHook;
 			int oldNumNonYieldable	= NumNonYieldable;
 			int oldErrFunc			= ErrFunc;
 
 			ErrFunc = errFunc;
-			ThreadStatus status = D_RawRunProtected( func, ud );
+			ThreadStatus status = D_RawRunProtected<T>( func, ref ud );
 			if( status != ThreadStatus.LUA_OK ) // an error occurred?
 			{
-				F_Close( oldTop );
-				SetErrorObj( status, oldTop );
-				CI = oldCI;
+				F_Close( Stack[oldTopIndex] );
+				SetErrorObj( status, Stack[oldTopIndex] );
+				CI = BaseCI[oldCIIndex];
 				AllowHook = oldAllowHook;
 				NumNonYieldable = oldNumNonYieldable;
 			}
@@ -111,110 +111,141 @@ namespace UniLua
 			// prepare for Lua call
 
 #if DEBUG_D_PRE_CALL
-			Debug.Log( "============================ D_PreCall func:" + func );
+			ULDebug.Log( "============================ D_PreCall func:" + func );
 #endif
 
-			var cl = func.Value as LuaLClosure;
-			if( cl != null )
-			{
+			int funcIndex = func.Index;
+			if(!func.V.TtIsFunction()) {
+				// not a function
+				// retry with `function' tag method
+				func = tryFuncTM( func );
+
+				// now it must be a function
+				return D_PreCall( func, nResults );
+			}
+
+			if(func.V.ClIsLuaClosure()) {
+				var cl = func.V.ClLValue();
+				Utl.Assert(cl != null);
 				var p = cl.Proto;
+
+				D_CheckStack(p.MaxStackSize + p.NumParams);
+				func = Stack[funcIndex];
 
 				// 补全参数
 				int n = (Top.Index - func.Index) - 1;
 				for( ; n<p.NumParams; ++n )
-				{
-					Top.Value = new LuaNil();
-					++Top.Index;
-				}
+					{ StkId.inc(ref Top).V.SetNilValue(); }
 
-				StkId stackBase = (!p.IsVarArg) ? (func + 1) : AdjustVarargs( p, n );
+				int stackBase = (!p.IsVarArg) ? (func.Index + 1) : AdjustVarargs( p, n );
 				
 				CI = ExtendCI();
 				CI.NumResults = nResults;
-				CI.Func = func;
-				CI.Base = stackBase;
-				CI.Top  = stackBase + p.MaxStackSize;
+				CI.FuncIndex = func.Index;
+				CI.BaseIndex = stackBase;
+				CI.TopIndex  = stackBase + p.MaxStackSize;
+				Utl.Assert(CI.TopIndex <= StackLast);
 				CI.SavedPc = new InstructionPtr( p.Code, 0 );
 				CI.CallStatus = CallStatus.CIST_LUA;
 
-				Top = CI.Top;
+				Top = Stack[CI.TopIndex];
 
 				return false;
 			}
 
-			var cscl = func.Value as LuaCSharpClosure;
-			if( cscl != null )
-			{
+			if(func.V.ClIsCsClosure()) {
+				var cscl = func.V.ClCsValue();
+				Utl.Assert(cscl != null);
+
+				D_CheckStack(LuaDef.LUA_MINSTACK);
+				func = Stack[funcIndex];
+
 				CI = ExtendCI();
 				CI.NumResults = nResults;
-				CI.Func = func;
-				CI.Top = Top + LuaDef.LUA_MINSTACK;
+				CI.FuncIndex = func.Index;
+				CI.TopIndex = Top.Index + LuaDef.LUA_MINSTACK;
 				CI.CallStatus = CallStatus.CIST_NONE;
 
 				// do the actual call
 				int n = cscl.F( this );
 				
 				// poscall
-				D_PosCall( Top-n );
+				D_PosCall( Top.Index-n );
 
 				return true;
 			}
 
-			// not a function
-			// retry with `function' tag method
-			func = tryFuncTM( func );
-
-			// now it must be a function
-			return D_PreCall( func, nResults );
+			throw new System.NotImplementedException();
 		}
 
-		private int D_PosCall( StkId firstResult )
+		private int D_PosCall( int firstResultIndex )
 		{
+			// TODO: hook
+			// be careful: CI may be changed after hook
 
-			CallInfo ci = CI;
-			StkId res = ci.Func;
-			int wanted = ci.NumResults;
+			int resIndex = CI.FuncIndex;
+			int wanted = CI.NumResults;
 
 #if DEBUG_D_POS_CALL
-			Debug.Log( "[D] ==== PosCall enter" );
-			Debug.Log( "[D] ==== PosCall res:" + res.Value );
-			Debug.Log( "[D] ==== PosCall wanted:" + wanted );
+			ULDebug.Log( "[D] ==== PosCall enter" );
+			ULDebug.Log( "[D] ==== PosCall res:" + res );
+			ULDebug.Log( "[D] ==== PosCall wanted:" + wanted );
 #endif
 
-			CI = ci.Previous;
+			CI = BaseCI[CI.Index-1];
+
 			int i = wanted;
-			for( ; i!=0 && firstResult.Index < Top.Index; --i )
+			for( ; i!=0 && firstResultIndex < Top.Index; --i )
 			{
 #if DEBUG_D_POS_CALL
-				Debug.Log( "[D] ==== PosCall assign lhs res:" + res );
-				Debug.Log( "[D] ==== PosCall assign rhs firstResult:" + firstResult );
+				ULDebug.Log( "[D] ==== PosCall assign lhs res:" + res );
+				ULDebug.Log( "[D] ==== PosCall assign rhs firstResult:" + firstResult );
 #endif
-				res.ValueInc = firstResult.ValueInc;
+				Stack[resIndex++].V.SetObj(ref Stack[firstResultIndex++].V);
 			}
 			while( i-- > 0 )
 			{
 #if DEBUG_D_POS_CALL
-				Debug.Log( "[D] ==== PosCall new LuaNil()" );
+				ULDebug.Log( "[D] ==== PosCall new LuaNil()" );
 #endif
-				res.ValueInc = new LuaNil();
+				Stack[resIndex++].V.SetNilValue();
 			}
-			Top = res;
+			Top = Stack[resIndex];
 #if DEBUG_D_POS_CALL
-			Debug.Log( "[D] ==== PosCall return " + (wanted - LuaDef.LUA_MULTRET) );
+			ULDebug.Log( "[D] ==== PosCall return " + (wanted - LuaDef.LUA_MULTRET) );
 #endif
 			return (wanted - LuaDef.LUA_MULTRET);
 		}
 
 		private CallInfo ExtendCI()
 		{
-			CallInfo ci = new CallInfo();
-			CI.Next = ci;
-			ci.Previous = CI;
-			ci.Next = null;
-			return ci;
+			int newIndex = CI.Index + 1;
+			if(newIndex >= BaseCI.Length) {
+				int newLength = BaseCI.Length*2;
+				var newBaseCI = new CallInfo[newLength];
+				int i = 0;
+				while(i < BaseCI.Length) {
+					newBaseCI[i] = BaseCI[i];
+					newBaseCI[i].List = newBaseCI;
+					++i;
+				}
+				while(i < newLength) {
+					var newCI = new CallInfo();
+					newBaseCI[i] = newCI;
+					newCI.List = newBaseCI;
+					newCI.Index = i;
+					++i;
+				}
+				BaseCI = newBaseCI;
+				CI = newBaseCI[CI.Index];
+				return newBaseCI[newIndex];
+			}
+			else {
+				return BaseCI[newIndex];
+			}
 		}
 
-		private StkId AdjustVarargs( LuaProto p, int actual )
+		private int AdjustVarargs( LuaProto p, int actual )
 		{
 			// 有 `...' 的情况
 			// 调用前: func (base)fixed-p1 fixed-p2 var-p1 var-p2 top
@@ -226,36 +257,86 @@ namespace UniLua
 			int NumFixArgs = p.NumParams;
 			Utl.Assert( actual >= NumFixArgs, "AdjustVarargs (actual >= NumFixArgs) is false" );
 
-			StkId fixedArg = Top - actual; 		// first fixed argument
-			StkId stackBase = Top;				// final position of first argument
-			for( int i=0; i<NumFixArgs; ++i )
+			int fixedArg = Top.Index - actual; 	// first fixed argument
+			int stackBase = Top.Index;		// final position of first argument
+			for( int i=stackBase; i<stackBase+NumFixArgs; ++i )
 			{
-				Top.ValueInc 		= fixedArg.Value;
-				fixedArg.ValueInc 	= new LuaNil();
+				Stack[i].V.SetObj(ref Stack[fixedArg].V);
+				Stack[fixedArg++].V.SetNilValue();
 			}
+			Top = Stack[stackBase+NumFixArgs];
 			return stackBase;
 		}
 
 		private StkId tryFuncTM( StkId func )
 		{
-			var tmObj = T_GetTMByObj( func.Value, TMS.TM_CALL );
-			if( !tmObj.IsFunction )
+			var tmObj = T_GetTMByObj( ref func.V, TMS.TM_CALL );
+			if(!tmObj.V.TtIsFunction())
 				G_TypeError( func, "call" );
 
 			// open a hole inside the stack at `func'
-			StkId q1 = Top-1;
-			StkId q2 = Top;
-			while( q2.Index > func.Index )
-			{
-				q2.Value = q1.Value;
-				q1.Index--;
-				q2.Index--;
-			}
+			for(int i=Top.Index; i>func.Index; --i)
+				{ Stack[i].V.SetObj(ref Stack[i-1].V); }
+
 			IncrTop();
-			func.Value = tmObj;
+			func.V.SetObj(ref tmObj.V);
 			return func;
 		}
 
+		private void D_CheckStack(int n)
+		{
+			if(StackLast - Top.Index <= n)
+				D_GrowStack(n);
+			// TODO: FOR DEBUGGING
+			// else
+			// 	CondMoveStack();
+		}
+
+		// some space for error handling
+		private const int ERRORSTACKSIZE = LuaConf.LUAI_MAXSTACK + 200;
+
+		private void D_GrowStack(int n)
+		{
+			int size = Stack.Length;
+			if(size > LuaConf.LUAI_MAXSTACK)
+				D_Throw(ThreadStatus.LUA_ERRERR);
+
+			int needed = Top.Index + n + LuaDef.EXTRA_STACK;
+			int newsize = 2 * size;
+			if(newsize > LuaConf.LUAI_MAXSTACK)
+				{ newsize = LuaConf.LUAI_MAXSTACK; }
+			if(newsize < needed)
+				{ newsize = needed; }
+			if(newsize > LuaConf.LUAI_MAXSTACK)
+			{
+				D_ReallocStack(ERRORSTACKSIZE);
+				G_RunError("stack overflow");
+			}
+			else
+			{
+				D_ReallocStack(newsize);
+			}
+		}
+
+		private void D_ReallocStack(int size)
+		{
+			Utl.Assert(size < LuaConf.LUAI_MAXSTACK || size == ERRORSTACKSIZE);
+			var newStack = new StkId[size];
+			int i = 0;
+			for( ; i<Stack.Length; ++i) {
+				newStack[i] = Stack[i];
+				newStack[i].SetList(newStack);
+			}
+			for( ; i<size; ++i) {
+				newStack[i] = new StkId();
+				newStack[i].SetList(newStack);
+				newStack[i].SetIndex(i);
+				newStack[i].V.SetNilValue();
+			}
+			Top = newStack[Top.Index];
+			Stack = newStack;
+			StackLast = size - LuaDef.EXTRA_STACK;
+		}
 	}
 
 }

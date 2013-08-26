@@ -30,6 +30,8 @@ namespace UniLua
 	public static class LuaDef
 	{
 		public const int LUA_MINSTACK 			= 20;
+		public const int BASIC_STACK_SIZE		= LUA_MINSTACK * 2;
+		public const int EXTRA_STACK			= 5;
 
 		public const int LUA_RIDX_MAINTHREAD 	= 1;
 		public const int LUA_RIDX_GLOBALS 		= 2;
@@ -49,6 +51,8 @@ namespace UniLua
 		public const string LUA_VERSION = "Lua " + LUA_VERSION_MAJOR + "." + LUA_VERSION_MINOR;
 
 		public const string LUA_ENV = "_ENV";
+
+		public const int BASE_CI_SIZE = 8;
 	}
 
 	public static class LuaConstants

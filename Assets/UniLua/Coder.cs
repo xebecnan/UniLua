@@ -6,7 +6,6 @@ namespace UniLua
 	using InstructionPtr = Pointer<Instruction>;
 	using Math = System.Math;
 	using Exception = System.Exception;
-	using Debug = UniLua.Tools.Debug;
 
 	public struct Instruction
 	{
@@ -228,20 +227,15 @@ namespace UniLua
 
 		private static void FreeReg( FuncState fs, int reg )
 		{
-			// Debug.Log("--------------- 4 ----------FreeReg reg:" + reg +
-			// 	" ISK:" + Instruction.ISK(reg) +
-			// 	" fs.NumActVar:" + fs.NumActVar);
 			if( !Instruction.ISK(reg) && reg >= fs.NumActVar )
 			{
 				fs.FreeReg--;
-				// Debug.Log("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% FREE REG reg:" + reg + " freereg:" + fs.FreeReg);
 				Utl.Assert( reg == fs.FreeReg );
 			}
 		}
 
 		private static void FreeExp( FuncState fs, ExpDesc e )
 		{
-			// Debug.Log("--------------- 3 ----------FreeExp k:" + e.Kind );
 			if( e.Kind == ExpKind.VNONRELOC )
 			{
 				FreeReg( fs, e.Info );
@@ -310,10 +304,6 @@ namespace UniLua
 			int o2 = ( op != OpCode.OP_UNM && op != OpCode.OP_LEN )
 				? Exp2RK( fs, e2 ) : 0;
 			int o1 = Exp2RK( fs, e1 );
-			// Debug.Log("CODE ARITH o1:" + o1 + " o2:" + o2 +
-			// 	" fs.FreeReg:" + fs.FreeReg +
-			// 	"\ne1.k:" + e1.Kind +
-			// 	"\ne2.k:" + e2.Kind);
 			if( o1 > o2 )
 			{
 				FreeExp( fs, e1 );
@@ -361,9 +351,7 @@ namespace UniLua
 
 		private static int GetJump( FuncState fs, int pc )
 		{
-			// Debug.Log("GetJump " + fs.Proto.Code.Count + " " + pc);
 			int offset = fs.Proto.Code[pc].GETARG_sBx();
-			// Debug.Log( fs.Proto.Code[pc] + " " + offset );
 			if( offset == NO_JUMP ) // point to itself represents end of list
 				return NO_JUMP; // end of list
 			else
@@ -429,8 +417,6 @@ namespace UniLua
 
 		private static void DischargeJpc( FuncState fs )
 		{
-			// Debug.Log( "**** **** DISCHARGE JPC jpc:" + fs.Jpc
-			// 	+ " pc:" + fs.Pc );
 			PatchListAux( fs, fs.Jpc, fs.Pc, NO_REG, fs.Pc );
 			fs.Jpc = NO_JUMP;
 		}
@@ -446,7 +432,6 @@ namespace UniLua
 
 		private static int JumpOnCond( FuncState fs, ExpDesc e, bool cond )
 		{
-			// Debug.Log("--------------- 2 ----------JumpOnCond k:" + e.Kind );
 			if( e.Kind == ExpKind.VRELOCABLE )
 			{
 				Instruction ie = fs.GetCode( e ).Value;
@@ -466,7 +451,6 @@ namespace UniLua
 
 		public static void GoIfTrue( FuncState fs, ExpDesc e )
 		{
-			// Debug.Log("--------------- 1 ----------GoIfTrue k:" + e.Kind );
 			int pc; // pc of last jump
 			DischargeVars( fs, e );
 			switch( e.Kind )
@@ -495,7 +479,6 @@ namespace UniLua
 
 		public static void GoIfFalse( FuncState fs, ExpDesc e )
 		{
-			// Debug.Log("GoIfFalse k:" + e.Kind );
 			int pc; // pc of last jump
 			DischargeVars( fs, e );
 			switch( e.Kind )
@@ -615,7 +598,6 @@ namespace UniLua
 
 		public static void Infix( FuncState fs, BinOpr op, ExpDesc e )
 		{
-			// Debug.Log(">> INFIX op:" + op);
 			switch( op )
 			{
 				case BinOpr.AND: {
@@ -649,7 +631,6 @@ namespace UniLua
 		public static void Posfix( FuncState fs, BinOpr op,
 			ExpDesc e1, ExpDesc e2, int line )
 		{
-			// Debug.Log(">> POSFIX op:" + op);
 			switch( op )
 			{
 				case BinOpr.AND: {
@@ -797,7 +778,6 @@ namespace UniLua
 
 		public static int Concat( FuncState fs, int l1, int l2 )
 		{
-			// Debug.Log("======== Concat l1:" + l1 + " l2:" + l2);
 			if( l2 == NO_JUMP )
 				return l1;
 			else if( l1 == NO_JUMP )
@@ -805,14 +785,12 @@ namespace UniLua
 			else
 			{
 				int list = l1;
-				// Debug.Log("Concat list:" + list);
 				int next = GetJump( fs, list );
 
 				// find last element
 				while( next != NO_JUMP )
 				{
 					list = next;
-					// Debug.Log("Concat list:" + list);
 					next = GetJump( fs, list );
 				}
 				FixJump( fs, list, l2 );
@@ -822,21 +800,23 @@ namespace UniLua
 
 		public static int StringK( FuncState fs, string s )
 		{
-			// Debug.Log(" STRING K >>>> " + s );
-			var o = new LuaString( s );
-			return AddK( fs, o, o );
+			var o = new TValue();
+			o.SetSValue(s);
+			return AddK( fs, ref o, ref o );
 		}
 
 		public static int NumberK( FuncState fs, double r )
 		{
-			var o = new LuaNumber( r );
-			return AddK( fs, o, o );
+			var o = new TValue();
+			o.SetNValue(r);
+			return AddK( fs, ref o, ref o );
 		}
 
 		private static int BoolK( FuncState fs, bool b )
 		{
-			var o = new LuaBoolean( b );
-			return AddK( fs, o, o );
+			var o = new TValue();
+			o.SetBValue(b);
+			return AddK( fs, ref o, ref o );
 		}
 
 		private static int NilK( FuncState fs )
@@ -847,11 +827,12 @@ namespace UniLua
 			// var o = new LuaNil();
 			// return AddK( fs, k, o );
 
-			var o = new LuaNil();
-			return AddK( fs, o, o );
+			var o = new TValue();
+			o.SetNilValue();
+			return AddK( fs, ref o, ref o );
 		}
 
-		public static int AddK( FuncState fs, LuaObject key, LuaObject v )
+		public static int AddK( FuncState fs, ref TValue key, ref TValue v )
 		{
 			int idx;
 			if( fs.H.TryGetValue( key, out idx ) )
@@ -859,8 +840,10 @@ namespace UniLua
 
 			idx = fs.Proto.K.Count;
 			fs.H.Add( key, idx );
-			fs.Proto.K.Add( v );
-			// Debug.Log("--------- ADD K ------- " + fs.Proto.K.Count + " line:" + fs.Lexer.LineNumber + " key:" + key);
+
+			var newItem = new StkId();
+			newItem.V.SetObj(ref v);
+			fs.Proto.K.Add(newItem);
 			return idx;
 		}
 
@@ -941,7 +924,6 @@ namespace UniLua
 
 		public static void ReserveRegs( FuncState fs, int n )
 		{
-			// Debug.Log("===================================== FREEREG + " + n);
 			CheckStack( fs, n );
 			fs.FreeReg += n;
 		}
@@ -1043,10 +1025,6 @@ namespace UniLua
 
 		public static int Exp2AnyReg( FuncState fs, ExpDesc e )
 		{
-			// Debug.Log("Exp2AnyReg k:" + e.Kind +
-			// 	" hasjump:" + HasJumps(e) +
-			// 	" info:" + e.Info +
-			// 	" nactvar:" + fs.NumActVar);
 			DischargeVars( fs, e );
 			if( e.Kind == ExpKind.VNONRELOC )
 			{
@@ -1153,7 +1131,6 @@ namespace UniLua
 
 				case ExpKind.VUPVAL: {
 					int c = Exp2AnyReg( fs, e );
-					// Debug.Log("SETUPVAL " + c + " " + v.Info);
 					CodeABC( fs, OpCode.OP_SETUPVAL, c, v.Info, 0 );
 					break;
 				}

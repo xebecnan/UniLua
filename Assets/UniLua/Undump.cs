@@ -4,14 +4,14 @@
 
 using System;
 
-using Debug = UniLua.Tools.Debug;
+using ULDebug = UniLua.Tools.ULDebug;
 
 namespace UniLua
 {
-	// using PlatformCfg = PlatformCfgX32;
-	// using SizeT = UInt32;
-	using PlatformCfg = PlatformCfgX64;
-	using SizeT = UInt64;
+	using PlatformCfg = PlatformCfgX32;
+	using SizeT = UInt32;
+	// using PlatformCfg = PlatformCfgX64;
+	// using SizeT = UInt64;
 
 	internal static class PlatformCfgX64
 	{
@@ -55,11 +55,11 @@ namespace UniLua
 #if DEBUG_BINARY_READER
 			var sb = new System.Text.StringBuilder();
 			sb.Append("ReadBytes:");
-			foreach( var b in ret )
+			for( var i=0; i<ret.Length; ++i )
 			{
-				sb.Append( string.Format(" {0:X02}", b) );
+				sb.Append( string.Format(" {0:X02}", ret[i]) );
 			}
-			Debug.Log( sb.ToString() );
+			ULDebug.Log( sb.ToString() );
 #endif
 			return ret;
 		}
@@ -69,7 +69,7 @@ namespace UniLua
 			var bytes = ReadBytes( 4 );
 			int ret = BitConverter.ToInt32( bytes, 0 );
 #if DEBUG_BINARY_READER
-			Debug.Log( "ReadInt: " + ret );
+			ULDebug.Log( "ReadInt: " + ret );
 #endif
 			return ret;
 		}
@@ -79,7 +79,7 @@ namespace UniLua
 			var bytes = ReadBytes( 4 );
 			uint ret = BitConverter.ToUInt32( bytes, 0 );
 #if DEBUG_BINARY_READER
-			Debug.Log( "ReadUInt: " + ret );
+			ULDebug.Log( "ReadUInt: " + ret );
 #endif
 			return ret;
 		}
@@ -89,7 +89,7 @@ namespace UniLua
 			var bytes = ReadBytes( PlatformCfg.SizeTypeLength );
 			var ret = PlatformCfg.ToSizeT( bytes, 0 );
 #if DEBUG_BINARY_READER
-			Debug.Log( "ReadSizeT: " + ret );
+			ULDebug.Log( "ReadSizeT: " + ret );
 #endif
 			return ret;
 		}
@@ -99,7 +99,7 @@ namespace UniLua
 			var bytes = ReadBytes( 8 );
 			double ret = BitConverter.ToDouble( bytes, 0 );
 #if DEBUG_BINARY_READER
-			Debug.Log( "ReadDouble: " + ret );
+			ULDebug.Log( "ReadDouble: " + ret );
 #endif
 			return ret;
 		}
@@ -110,7 +110,7 @@ namespace UniLua
 			if( c == -1 )
 				throw new UndumpException("truncated");
 #if DEBUG_BINARY_READER
-			Debug.Log( "ReadBytes: " + c );
+			ULDebug.Log( "ReadBytes: " + c );
 #endif
 			return (byte)c;
 		}
@@ -126,7 +126,7 @@ namespace UniLua
 			// n=1: removing trailing '\0'
 			string ret = System.Text.Encoding.UTF8.GetString( bytes, 0, n-1 );
 #if DEBUG_BINARY_READER
-			Debug.Log( "ReadString n:" + n + " ret:" + ret );
+			ULDebug.Log( "ReadString n:" + n + " ret:" + ret );
 #endif
 			return ret;
 		}
@@ -223,7 +223,7 @@ namespace UniLua
 		private LuaProto LoadFunction()
 		{
 #if DEBUG_UNDUMP
-			Debug.Log( "LoadFunction enter" );
+			ULDebug.Log( "LoadFunction enter" );
 #endif
 
 			LuaProto proto = new LuaProto();
@@ -244,15 +244,15 @@ namespace UniLua
 		{
 			var n = LoadInt();
 #if DEBUG_UNDUMP
-			Debug.Log( "LoadCode n:" + n );
+			ULDebug.Log( "LoadCode n:" + n );
 #endif
 			proto.Code.Clear();
 			for( int i=0; i<n; ++i )
 			{
 				proto.Code.Add( LoadInstruction() );
 #if DEBUG_UNDUMP
-				Debug.Log( "Count:" + proto.Code.Count );
-				Debug.Log( "LoadInstruction:" + proto.Code[proto.Code.Count-1] );
+				ULDebug.Log( "Count:" + proto.Code.Count );
+				ULDebug.Log( "LoadInstruction:" + proto.Code[proto.Code.Count-1] );
 #endif
 			}
 		}
@@ -261,34 +261,39 @@ namespace UniLua
 		{
 			var n = LoadInt();
 #if DEBUG_UNDUMP
-			Debug.Log( "Load Constants:" + n );
+			ULDebug.Log( "Load Constants:" + n );
 #endif
 			proto.K.Clear();
 			for( int i=0; i<n; ++i )
 			{
 				int t = (int)LoadByte();
 #if DEBUG_UNDUMP
-				Debug.Log( "Constant Type:" + t );
+				ULDebug.Log( "Constant Type:" + t );
 #endif
+				var v = new StkId();
 				switch( t )
 				{
 					case (int)LuaType.LUA_TNIL:
-						proto.K.Add( new LuaNil() );
+						v.V.SetNilValue();
+						proto.K.Add( v );
 						break;
 
 					case (int)LuaType.LUA_TBOOLEAN:
-						proto.K.Add( new LuaBoolean( LoadBoolean() ) );
+						v.V.SetBValue(LoadBoolean());
+						proto.K.Add( v );
 						break;
 
 					case (int)LuaType.LUA_TNUMBER:
-						proto.K.Add( new LuaNumber( LoadNumber() ) );
+						v.V.SetNValue(LoadNumber());
+						proto.K.Add( v );
 						break;
 
 					case (int)LuaType.LUA_TSTRING:
 #if DEBUG_UNDUMP
-						Debug.Log( "LuaType.LUA_TSTRING" );
+						ULDebug.Log( "LuaType.LUA_TSTRING" );
 #endif
-						proto.K.Add( new LuaString( LoadString() ) );
+						v.V.SetSValue(LoadString());
+						proto.K.Add( v );
 						break;
 
 					default:
@@ -299,7 +304,7 @@ namespace UniLua
 
 			n = LoadInt();
 #if DEBUG_UNDUMP
-			Debug.Log( "Load Functions:" + n );
+			ULDebug.Log( "Load Functions:" + n );
 #endif
 			proto.P.Clear();
 			for( int i=0; i<n; ++i )
@@ -312,7 +317,7 @@ namespace UniLua
 		{
 			var n = LoadInt();
 #if DEBUG_UNDUMP
-			Debug.Log( "Load Upvalues:" + n );
+			ULDebug.Log( "Load Upvalues:" + n );
 #endif
 			proto.Upvalues.Clear();
 			for( int i=0; i<n; ++i )
@@ -335,7 +340,7 @@ namespace UniLua
 			// LineInfo
 			n = LoadInt();
 #if DEBUG_UNDUMP
-			Debug.Log( "Load LineInfo:" + n );
+			ULDebug.Log( "Load LineInfo:" + n );
 #endif
 			proto.LineInfo.Clear();
 			for( int i=0; i<n; ++i )
@@ -346,7 +351,7 @@ namespace UniLua
 			// LocalVar
 			n = LoadInt();
 #if DEBUG_UNDUMP
-			Debug.Log( "Load LocalVar:" + n );
+			ULDebug.Log( "Load LocalVar:" + n );
 #endif
 			proto.LocVars.Clear();
 			for( int i=0; i<n; ++i )

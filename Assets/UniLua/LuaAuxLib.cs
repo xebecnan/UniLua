@@ -23,9 +23,11 @@ namespace UniLua
 	{
 		void 	L_Where( int level );
 		int 	L_Error( string fmt, params object[] args );
+		void	L_CheckStack( int size, string msg );
 		void 	L_CheckAny( int narg );
 		void 	L_CheckType( int index, LuaType t );
 		double	L_CheckNumber( int narg );
+		UInt64	L_CheckUInt64( int narg );
 		int 	L_CheckInteger( int narg );
 		string 	L_CheckString( int narg );
 		uint	L_CheckUnsigned( int narg );
@@ -37,6 +39,7 @@ namespace UniLua
 		bool 	L_GetMetaField( int index, string method );
 		int 	L_GetSubTable( int index, string fname );
 
+		void 	L_RequireF( string moduleName, CSharpFunctionDelegate openFunc, bool global );
 		void 	L_OpenLibs();
 		void 	L_NewLibTable( NameFuncPair[] define );
 		void	L_NewLib( NameFuncPair[] define );
@@ -151,6 +154,17 @@ namespace UniLua
 			return API.Error();
 		}
 
+		public void L_CheckStack( int size, string msg )
+		{
+			// keep some extra space to run error routines, if needed
+			if(!API.CheckStack(size + LuaDef.LUA_MINSTACK)) {
+				if(msg != null)
+					{ L_Error(string.Format("stack overflow ({0})", msg)); }
+				else
+					{ L_Error("stack overflow"); }
+			}
+		}
+
 		public void L_CheckAny( int narg )
 		{
 			if( API.Type( narg ) == LuaType.LUA_TNONE )
@@ -164,6 +178,15 @@ namespace UniLua
 			if( !isnum )
 				TagError( narg, LuaType.LUA_TNUMBER );
 			return d;
+		}
+
+		public UInt64 L_CheckUInt64( int narg )
+		{
+			bool isnum;
+			UInt64 v = API.ToUInt64X( narg, out isnum );
+			if( !isnum )
+				TagError( narg, LuaType.LUA_TUINT64 );
+			return v;
 		}
 
 		public int L_CheckInteger( int narg )
@@ -445,14 +468,8 @@ namespace UniLua
 					loadinfo.SkipComment();
 					status = API.Load( loadinfo, API.ToString(-1), mode );
 				}
-				// using( var stream = File.Open( filename, FileMode.Open ) )
-				// {
-				// 	var loadinfo = new FileLoadInfo( stream );
-				// 	loadinfo.SkipComment();
-				// 	status = API.Load( loadinfo, API.ToString(-1), mode );
-				// }
 			}
-			catch( Exception e )
+			catch( LuaRuntimeException e )
 			{
 				API.PushString( string.Format( "cannot open {0}: {1}",
 					filename, e.Message ) );
@@ -546,6 +563,7 @@ namespace UniLua
 				new NameFuncPair( LuaCoroLib.LIB_NAME,	LuaCoroLib.OpenLib  ),
 				new NameFuncPair( LuaTableLib.LIB_NAME,	LuaTableLib.OpenLib ),
 				new NameFuncPair( LuaIOLib.LIB_NAME,	LuaIOLib.OpenLib	),
+				new NameFuncPair( LuaOSLib.LIB_NAME,	LuaOSLib.OpenLib	),
 				// {LUA_OSLIBNAME, luaopen_os},
 				new NameFuncPair( LuaStrLib.LIB_NAME, 	LuaStrLib.OpenLib   ),
 				new NameFuncPair( LuaBitLib.LIB_NAME, 	LuaBitLib.OpenLib   ),
@@ -555,9 +573,9 @@ namespace UniLua
 				new NameFuncPair( LuaEncLib.LIB_NAME,	LuaEncLib.OpenLib	),
 			};
 
-			foreach( var pair in define )
+			for( var i=0; i<define.Length; ++i)
 			{
-				L_RequireF( pair.Name, pair.Func, true );
+				L_RequireF( define[i].Name, define[i].Func, true );
 				API.Pop( 1 );
 			}
 
@@ -610,12 +628,13 @@ namespace UniLua
 		public void L_SetFuncs( NameFuncPair[] define, int nup )
 		{
 			// TODO: Check Version
-			foreach( var pair in define )
+			L_CheckStack(nup, "too many upvalues");
+			for( var j=0; j<define.Length; ++j )
 			{
 				for( int i=0; i<nup; ++i )
 					API.PushValue( -nup );
-				API.PushCSharpClosure( pair.Func, nup );
-				API.SetField( -(nup + 2), pair.Name );
+				API.PushCSharpClosure( define[j].Func, nup );
+				API.SetField( -(nup + 2), define[j].Name );
 			}
 			API.Pop( nup );
 		}

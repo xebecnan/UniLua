@@ -5,6 +5,7 @@ using System.Collections.Generic;
 
 namespace UniLua
 {
+	using ULDebug = UniLua.Tools.ULDebug;
 
 	internal class LuaFFILib
 	{
@@ -57,7 +58,7 @@ namespace UniLua
 			if( assembly != null )
 				AssemblyList.Add( assembly );
 			else
-				UnityEngine.Debug.LogError("assembly not found:" + name);
+				ULDebug.LogError("assembly not found:" + name);
 			return 0;
 		}
 
@@ -101,7 +102,6 @@ namespace UniLua
 		{
 			string typename = lua.ToString(1);
 			var t = GetType(typename);
-			// UnityEngine.Debug.Log("GET TYPE:" + typename + " => " + t );
 			if( t != null )
 				lua.PushLightUserData(t);
 			else
@@ -160,28 +160,6 @@ namespace UniLua
 
 		private static int FFI_GetMethod( ILuaState lua )
 		{
-			// var t = (Type)lua.ToUserData(1);
-			// var mname = lua.ToString(2);
-			// var n = lua.RawLen(3);
-			// var types = new Type[n];
-			// for( int i=0; i<n; ++i )
-			// {
-			// 	lua.RawGetI( 3, i+1 );
-			// 	types[i] = (Type)lua.ToUserData(-1);
-			// 	lua.Pop(1);
-			// }
-			// var minfo = t.GetMethod( mname,
-			// 	BindingFlags.Instance
-			// 		| BindingFlags.Public
-			// 		| BindingFlags.InvokeMethod,
-			// 	null,
-			// 	CallingConventions.Any,
-			// 	types,
-			// 	null
-			// 	);
-			// var ffiMethod = new FFIMethodInfo(minfo);
-			// lua.PushLightUserData( ffiMethod );
-			// return 1;
 			return GetMethodAux( lua,
 				BindingFlags.Instance |
 				BindingFlags.Public |
@@ -190,15 +168,6 @@ namespace UniLua
 
 		private static int FFI_GetStaticMethod( ILuaState lua )
 		{
-			// var t = (Type)lua.ToUserData(1);
-			// var mname = lua.ToString(2);
-			// var minfo = t.GetMethod( mname,
-			// 	BindingFlags.Static |
-			// 	BindingFlags.Public |
-			// 	BindingFlags.InvokeMethod );
-			// var ffiMethod = new FFIMethodInfo(minfo);
-			// lua.PushLightUserData( ffiMethod );
-			// return 1;
 			return GetMethodAux( lua,
 				BindingFlags.Static |
 				BindingFlags.Public |
@@ -240,7 +209,6 @@ namespace UniLua
 				BindingFlags.Public );
 			if( finfo == null )
 				throw new Exception("GetField failed:"+name);
-			// UnityEngine.Debug.Log("FFI_GetField t:"+t+" name:"+name+" finfo:"+finfo);
 			lua.PushLightUserData(finfo);
 			return 1;
 		}
@@ -261,7 +229,6 @@ namespace UniLua
 			var inst = lua.ToUserData(2);
 			var t = (Type)lua.ToUserData(4);
 			var value = LuaStackUtil.ToRawValue(lua, 3, t);
-			// UnityEngine.Debug.Log("FFI_SetPropValue finfo:"+finfo+" t:"+t+" value:"+value);
 			finfo.SetValue( inst, value );
 			return 0;
 		}
@@ -273,7 +240,6 @@ namespace UniLua
 			var pinfo = t.GetProperty( name,
 				BindingFlags.Instance |
 				BindingFlags.Public );
-			// UnityEngine.Debug.Log("FFI_GetProp t:"+t+" name:"+name+" pinfo:"+pinfo);
 			if( pinfo == null )
 				throw new Exception("GetProperty failed:"+name);
 			lua.PushLightUserData(pinfo);
@@ -287,7 +253,6 @@ namespace UniLua
 			var pinfo = t.GetProperty( name,
 				BindingFlags.Static |
 				BindingFlags.Public );
-			// UnityEngine.Debug.Log("FFI_GetStaticProp t:"+t+" name:"+name+" pinfo:"+pinfo);
 			if( pinfo == null )
 				throw new Exception("GetProperty failed:"+name);
 			lua.PushLightUserData(pinfo);
@@ -310,16 +275,9 @@ namespace UniLua
 			var inst = lua.ToUserData(2);
 			var t = (Type)lua.ToUserData(4);
 			var value = LuaStackUtil.ToRawValue(lua, 3, t);
-			// UnityEngine.Debug.Log("FFI_SetPropValue pinfo:"+pinfo+" t:"+t+" value:"+value);
 			pinfo.SetValue( inst, value, null );
 			return 0;
 		}
-
-		// private static int FFI_CallConstructor( ILuaState lua )
-		// {
-		// 	var ffiConstructor = (FFIConstructorInfo)lua.ToUserData(1);
-		// 	return ffiConstructor.Call( lua );
-		// }
 
 //////////////////////////////////////////////////////////////////////
 
@@ -335,9 +293,9 @@ namespace UniLua
 		private static Type FindTypeInAllAssemblies(string typename)
 		{
 			Type result = null;
-			foreach( var assembly in AssemblyList )
+			for( var i=0; i<AssemblyList.Count; ++i )
 			{
-				var t = assembly.GetType( typename );
+				var t = AssemblyList[i].GetType( typename );
 				if( t != null )
 				{
 					if(result == null) {
@@ -357,9 +315,9 @@ namespace UniLua
 			if( result != null )
 				return result;
 
-			foreach( var ns in UsingList )
+			for( var i=0; i<UsingList.Count; ++i )
 			{
-				var fullname = ns + "." + typename;
+				var fullname = UsingList[i] + "." + typename;
 				result = FindTypeInAllAssemblies( fullname );
 				if( result != null )
 					return result;
@@ -449,10 +407,6 @@ namespace UniLua
 					}
 
 					default: {
-						// UnityEngine.Debug.Log( "==========" +
-						// 	" Name:" + t.Name +
-						// 	" FullName:" + t.FullName );
-
 						lua.PushLightUserData( o );
 						return 1;
 					}
@@ -516,9 +470,6 @@ namespace UniLua
 						var u = lua.ToUserData(index);
 						if( u == null )
 						{
-							// UnityEngine.Debug.Log( "==========" +
-							// 	" Name:" + t.Name +
-							// 	" FullName:" + t.FullName );
 							return null;
 						}
 						else return u;
@@ -538,8 +489,6 @@ namespace UniLua
 				for( int i=0; i<parameters.Length; ++i )
 				{
 					ParameterTypes[i] = parameters[i].ParameterType;
-					// UnityEngine.Debug.Log( string.Format(
-					// 	"&&&& PARAMETER {0} {1}", i, ParameterTypes[i] ) );
 				}
 			}
 
@@ -548,25 +497,10 @@ namespace UniLua
 				const int firstParamPos = 3;
 				int n = lua.GetTop();
 				var inst  = lua.ToUserData(2);
-				// UnityEngine.Debug.Log(string.Format(
-				// 	"**** inst {0}", inst
-				// 	));
 				int nparam = n - firstParamPos + 1;
 				var parameters = new object[nparam];
 				for( int i=0; i<nparam; ++i )
 				{
-					// var par = lua.ToObject(firstParamPos + i);
-					// // UnityEngine.Debug.Log(string.Format(
-					// // 	"**** {0} {1} {2} {3} {4}",
-					// // 	firstParamPos+i, par, n, i, ParameterTypes.Length
-					// // 	));
-					// var partype = ParameterTypes[i];
-					// parameters[i] = ConvertParameter(par, partype);
-					// // UnityEngine.Debug.Log(string.Format(
-					// // 	"parameters[{0}] = {1}" +
-					// // 	"\npar: {2}\npartype: {3}",
-					// // 	i, parameters[i], par, partype));
-					
 					var index = firstParamPos + i;
 					var partype = ParameterTypes[i];
 					parameters[i] = LuaStackUtil.ToRawValue(lua, index, partype);
@@ -578,34 +512,6 @@ namespace UniLua
 
 			private MethodBase 	Method;
 			private Type[] 		ParameterTypes;
-
-			// private object ConvertParameter( object par, Type partype )
-			// {
-			// 	switch( partype.FullName )
-			// 	{
-			// 		case "System.String": {
-			// 			var s = par as LuaString;
-			// 			return (s != null) ? s.Value : null;
-			// 		}
-
-			// 		case "System.Single": {
-			// 			var n = par as LuaNumber;
-			// 			return (n != null) ? n.Value : 0.0;
-			// 		}
-
-			// 		default: {
-			// 			var u = par as LuaLightUserData;
-			// 			if( u == null )
-			// 			{
-			// 				UnityEngine.Debug.Log( "==========" +
-			// 					" Name:" + partype.Name +
-			// 					" FullName:" + partype.FullName );
-			// 				return null;
-			// 			}
-			// 			else return u.Value;
-			// 		}
-			// 	}
-			// }
 
 			protected virtual int PushReturnValue( ILuaState lua, object o )
 			{
@@ -625,27 +531,6 @@ namespace UniLua
 			protected override int PushReturnValue( ILuaState lua, object o )
 			{
 				return LuaStackUtil.PushRawValue( lua, o, ReturnType );
-				// switch( ReturnType.FullName )
-				// {
-				// 	case "System.String": {
-				// 		lua.PushString( o as string );
-				// 		return 1;
-				// 	}
-
-				// 	case "System.Single": {
-				// 		lua.PushNumber( (float)o );
-				// 		return 1;
-				// 	}
-
-				// 	default: {
-				// 		UnityEngine.Debug.Log( "==========" +
-				// 			" Name:" + ReturnType.Name +
-				// 			" FullName:" + ReturnType.FullName );
-
-				// 		lua.PushLightUserData( o );
-				// 		return 1;
-				// 	}
-				// }
 			}
 		}
 
@@ -716,8 +601,6 @@ namespace UniLua
 					Result.ReturnType = s1;
 					Result.FuncName = s2;
 				}
-				// ReturnType();
-				// FuncName();
 				FuncArgs();
 				if( Lexer.Token.TokenType != (int)TK.EOS )
 				{
@@ -802,9 +685,6 @@ namespace UniLua
 					TypeList();
 					CheckMatch( (int)')', (int)'(', line );
 				}
-				// else {
-				// 	Lexer.SyntaxError( "function arguments expected" );
-				// }
 			}
 
 			private bool TestNext( int tokenType )
@@ -835,18 +715,6 @@ namespace UniLua
 							where ) );
 				}
 			}
-
-			// private void Check( int tokenType )
-			// {
-			// 	if( Lexer.Token.TokenType != tokenType )
-			// 		ErrorExpected( tokenType );
-			// }
-
-			// private void CheckNext( int tokenType )
-			// {
-			// 	Check( tokenType );
-			// 	Lexer.Next();
-			// }
 		}
 
 	}

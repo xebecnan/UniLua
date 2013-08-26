@@ -1,5 +1,6 @@
 ﻿
 #define API_CHECK
+#define UNILUA_ASSERT
 
 using System;
 
@@ -20,40 +21,52 @@ namespace UniLua
 
 		public static void Assert( bool condition )
 		{
+#if UNILUA_ASSERT
 			if( !condition )
 				Throw("assert failed!" );
 			DebugS.Assert( condition );
+#endif
 		}
 
 		public static void Assert( bool condition, string message )
 		{
+#if UNILUA_ASSERT
 			if( !condition )
 				Throw( "assert failed! ", message );
 			DebugS.Assert( condition, message );
+#endif
 		}
 
 		public static void Assert( bool condition, string message, string detailMessage )
 		{
+#if UNILUA_ASSERT
 			if( !condition )
 				Throw( "assert failed! ", message, "\n", detailMessage );
 			DebugS.Assert( condition, message, detailMessage );
+#endif
 		}
 
 		public static void ApiCheck( bool condition, string message )
 		{
+#if UNILUA_ASSERT
 #if API_CHECK
 			Assert( condition, message );
+#endif
 #endif
 		}
 
 		public static void ApiCheckNumElems( LuaState lua, int n )
 		{
-			Assert( n < (lua.Top.Index - lua.CI.Func.Index), "not enough elements in the stack" );
+#if UNILUA_ASSERT
+			Assert( n < (lua.Top.Index - lua.CI.FuncIndex), "not enough elements in the stack" );
+#endif
 		}
 
 		public static void InvalidIndex()
 		{
+#if UNILUA_ASSERT
 			Assert( false, "invalid index" );
+#endif
 		}
 
 		private static bool IsNegative( string s, ref int pos )
