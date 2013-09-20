@@ -114,11 +114,21 @@ namespace UniLua
 			return lua.Error();
 		}
 
-		private static int LoadAux( ILuaState lua, ThreadStatus status )
+		private static int LoadAux( ILuaState lua, ThreadStatus status, int envidx )
 		{
 			if( status == ThreadStatus.LUA_OK )
+			{
+				if( envidx != 0 ) // `env' parameter?
+				{
+					lua.PushValue(envidx); // push `env' on stack
+					if( lua.SetUpvalue(-2, 1) == null ) // set `env' as 1st upvalue of loaded function
+					{
+						lua.Pop(1); // remove `env' if not used by previous call
+					}
+				}
 				return 1;
-			else
+			}
+			else // error (message is on top of the stack)
 			{
 				lua.PushNil();
 				lua.Insert(-2); // put before error message
@@ -130,23 +140,17 @@ namespace UniLua
 		{
 			string fname = lua.L_OptString( 1, null );
 			string mode  = lua.L_OptString( 2, null );
-			bool env = ! lua.IsNone( 3 );
+			int env = (!lua.IsNone(3) ? 3 : 0); // `env' index or 0 if no `env'
 			var status = lua.L_LoadFileX( fname, mode );
-			if( status != ThreadStatus.LUA_OK && env )
-			{
-				lua.PushValue( 3 );
-				lua.SetUpvalue( -2, 1 ); // put before error message
-				return 2;
-			}
-			return LoadAux( lua, status );
+			return LoadAux(lua, status, env);
 		}
 
 		public static int B_Load( ILuaState lua )
 		{
 			ThreadStatus status;
-			int top = lua.GetTop();
 			string s = lua.ToString(1);
 			string mode = lua.L_OptString(3, "bt");
+			int env = (! lua.IsNone(4) ? 4 : 0); // `env' index or 0 if no `env'
 			if( s != null )
 			{
 				string chunkName = lua.L_OptString(2, s);
@@ -154,16 +158,9 @@ namespace UniLua
 			}
 			else // loading from a reader function
 			{
-				// TODO
-				throw new System.NotImplementedException();
+				throw new System.NotImplementedException(); // TODO
 			}
-
-			if( status ==  ThreadStatus.LUA_OK && top >= 4 ) // is there an `env' argument
-			{
-				lua.PushValue(4); // environment for loaded function
-				lua.SetUpvalue(-2, 1); // set it as 1st upvalue
-			}
-			return LoadAux( lua, status );
+			return LoadAux( lua, status, env );
 		}
 
 		private static int FinishPCall( ILuaState lua, bool status )

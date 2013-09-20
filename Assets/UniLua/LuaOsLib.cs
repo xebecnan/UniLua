@@ -11,18 +11,22 @@ namespace UniLua
 		{
 			NameFuncPair[] define = new NameFuncPair[]
 			{
+#if !UNITY_WEBPLAYER
 				new NameFuncPair("clock", 	OS_Clock),
+#endif
 			};
 
 			lua.L_NewLib( define );
 			return 1;
 		}
 
+#if !UNITY_WEBPLAYER
 		private static int OS_Clock( ILuaState lua )
 		{
 			lua.PushNumber( Process.GetCurrentProcess().TotalProcessorTime.TotalSeconds );
 			return 1;
 		}
+#endif
 	}
 }
 
