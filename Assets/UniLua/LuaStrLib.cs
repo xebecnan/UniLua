@@ -134,6 +134,8 @@ namespace UniLua
 			public MatchState()
 			{
 				Capture = new CaptureInfo[LUA_MAXCAPTURES];
+				for(int i =0; i < LUA_MAXCAPTURES; ++i)
+					Capture[i] = new CaptureInfo();
 			}
 		}
 
@@ -429,36 +431,35 @@ namespace UniLua
 				{
 					int ep = ClassEnd( ms, p );
 					bool m = s < ms.SrcEnd && SingleMatch(ms, ms.Src[s], p, ep);
-					switch(ms.Src[ep])
-					{
-						case '?': // optional
+				    if(ep < ms.PatternEnd){
+						switch(ms.Pattern[ep]) //fix gmatch bug patten is [^a]
 						{
-							if( m )
+							case '?': // optional
 							{
-								int res = Match(ms, s+1, ep+1);
-								if( res != -1 )
-									return res;
+								if( m )
+								{
+									int res = Match(ms, s+1, ep+1);
+									if( res != -1 )
+										return res;
+								}
+								p=ep+1; goto init; // else return match(ms, s, ep+1);
 							}
-							p=ep+1; goto init; // else return match(ms, s, ep+1);
+							case '*': // 0 or more repetitions
+							{
+								return MaxExpand(ms, s, p, ep);
+							}
+							case '+': // 1 or more repetitions
+							{
+								return (m ? MaxExpand(ms, s+1, p, ep) : -1);
+							}
+							case '-': // 0 or more repetitions (minimum)
+							{
+								return MinExpand(ms, s, p, ep);
+							}
 						}
-						case '*': // 0 or more repetitions
-						{
-							return MaxExpand(ms, s, p, ep);
-						}
-						case '+': // 1 or more repetitions
-						{
-							return (m ? MaxExpand(ms, s+1, p, ep) : -1);
-						}
-						case '-': // 0 or more repetitions (minimum)
-						{
-							return MinExpand(ms, s, p, ep);
-						}
-						default:
-						{
-							if(!m) return -1;
-							s++; p=ep; goto init; // else return match(ms, s+1, ep);
-						}
-					}
+				    }
+				    if(!m) return -1;
+					s++; p=ep; goto init; // else return match(ms, s+1, ep);
 				}
 			}
 		}
@@ -765,11 +766,106 @@ namespace UniLua
 			lua.PushCSharpClosure( GmatchAux, 3 );
 			return 1;
 		}
+		
+		private static void Add_S (MatchState ms, StringBuilder b, int s, int e) {
+		  string news = ms.Lua.ToString(3);
+		  for (int i = 0; i < news.Length; i++) {
+			if (news[i] != L_ESC)
+			  b.Append(news[i]);
+			else {
+			  i++;  /* skip ESC */
+			  if (!Char.IsDigit((news[i])))
+			      b.Append(news[i]);
+			  else if (news[i] == '0')
+				  b.Append(ms.Src.Substring(s, (e - s))); 
+			  else {
+				PushOneCapture(ms, news[i] - '1', s, e);
+				b.Append(ms.Lua.ToString(-1));  /* add capture to accumulated result */
+			  }
+			}
+		  }
+		}
+		
+		private static void Add_Value (MatchState ms, StringBuilder b, int s, int e) {
+		  ILuaState lua = ms.Lua;
+		  switch (lua.Type(3)) {
+			case LuaType.LUA_TNUMBER:
+			case LuaType.LUA_TSTRING: {
+			  Add_S(ms, b, s, e);
+			  return;
+			}
+			case LuaType.LUA_TFUNCTION: {
+			  int n;
+			  lua.PushValue(3);
+			  n = PushCaptures(lua, ms, s, e);
+			  lua.Call(n, 1);
+			  break;
+			}
+			case LuaType.LUA_TTABLE: {
+			  PushOneCapture(ms, 0, s, e);
+			  lua.GetTable(3);
+			  break;
+			}
+		  }
+		  if (lua.ToBoolean(-1)==false) {  /* nil or false? */
+			lua.Pop(1);
+			b.Append(ms.Src.Substring(s, (e - s)));  /* keep original text */
+		  }
+		  else if (!lua.IsString(-1))
+			lua.L_Error("invalid replacement value (a %s)", lua.L_TypeName(-1));
+	      else
+			b.Append(lua.ToString(-1));
+		}
 
 		private static int Str_Gsub( ILuaState lua )
 		{
-			// TODO
-			throw new System.NotImplementedException();
+			
+			string src = lua.L_CheckString(1);
+			int srcl = src.Length;
+			string p = lua.L_CheckString(2);
+			LuaType tr = lua.Type(3);
+			int max_s = lua.L_OptInt(4, srcl + 1);
+			int anchor = 0;
+			if (p[0] == '^')
+			{
+                p = p.Substring(1);
+                anchor = 1;
+			}
+			int n = 0;
+			MatchState ms = new MatchState();
+			StringBuilder b = new StringBuilder(srcl);
+			lua.L_ArgCheck(tr == LuaType.LUA_TNUMBER || tr == LuaType.LUA_TSTRING ||
+						   tr == LuaType.LUA_TFUNCTION || tr == LuaType.LUA_TTABLE, 3,
+							  "string/function/table expected");
+			ms.Lua = lua;
+			ms.Src = src;
+			ms.SrcInit = 0;
+			ms.SrcEnd = srcl;
+			ms.Pattern = p;
+			ms.PatternEnd = p.Length;
+			int s = 0;
+			while (n < max_s) {
+			   ms.Level = 0;
+			   int e = Match(ms, s, 0);
+			   if (e != -1) {
+			       n++;
+				   Add_Value(ms, b, s, e);
+			   }
+			   if ((e != -1) && e > s) /* non empty match? */
+			      s = e;  /* skip it */
+			   else if (s < ms.SrcEnd)
+			   {
+			       char c = src[s];
+				   ++s;
+			       b.Append(c);
+			   }
+			   else break;
+			   if (anchor != 0) break;
+		    }
+			b.Append(src.Substring(s, ms.SrcEnd - s));
+			lua.PushString(b.ToString());
+		    lua.PushInteger(n);  /* number of substitutions */
+		    return 2;
 		}
 
 		private static int Str_Len( ILuaState lua )
