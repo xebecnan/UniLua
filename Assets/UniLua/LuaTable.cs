@@ -249,7 +249,7 @@ namespace UniLua
 
 		private bool IsPositiveInteger(ref TValue v)
 		{
-			return (v.TtIsNumber() && v.NValue > 0 && (v.NValue % 1) == 0);
+			return (v.TtIsNumber() && v.NValue > 0 && (v.NValue % 1) == 0 && v.NValue <= int.MaxValue); //fix large number key bug
 		}
 
 		private HNode GetHashNode(int hashcode)
