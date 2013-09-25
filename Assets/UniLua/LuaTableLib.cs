@@ -127,6 +127,7 @@ namespace UniLua
 			int pos = lua.L_OptInt( 2, e );
 			if( !(1 <= pos && pos <= e) ) // position is outside bounds?
 				return 0; // nothing to remove
+			lua.RawGetI(1, pos); /* result = t[pos] */
 			for( ; pos<e; ++pos )
 			{
 				lua.RawGetI( 1, pos+1 );
