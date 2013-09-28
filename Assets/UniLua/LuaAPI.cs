@@ -58,6 +58,8 @@ namespace UniLua
 		void RawSet( int index );
 		void GetField( int index, string key );
 		void SetField( int index, string key );
+		void GetTable( int index );
+		void SetTable( int index );
 
 		void Concat( int n );
 
@@ -101,7 +103,7 @@ namespace UniLua
 		double 	ToNumberX( int index, out bool isnum );
 		double 	ToNumber( int index );
 		int		ToIntegerX( int index, out bool isnum );
-		int    	ToInteger( int index );
+		int		ToInteger( int index );
 		uint	ToUnsignedX( int index, out bool isnum );
 		uint	ToUnsigned( int index );
 		bool   	ToBoolean( int index );
@@ -975,6 +977,29 @@ namespace UniLua
 
 			StkId.inc(ref Top).V.SetSValue( key );
 			V_SetTable( addr, Stack[Top.Index-1], Stack[Top.Index-2] );
+			Top = Stack[Top.Index-2];
+		}
+
+		void ILuaAPI.GetTable( int index )
+		{
+			StkId addr;
+			if(! Index2Addr( index, out addr ) )
+				Utl.InvalidIndex();
+
+			var below = Stack[Top.Index - 1];
+			V_GetTable( addr, below, below );
+		}
+
+		void ILuaAPI.SetTable( int index )
+		{
+			StkId addr;
+			Utl.ApiCheckNumElems( this, 2 );
+			if(! Index2Addr( index, out addr ) )
+				Utl.InvalidIndex();
+
+			var key = Stack[Top.Index - 2];
+			var val = Stack[Top.Index - 1];
+			V_SetTable( addr, key, val);
 			Top = Stack[Top.Index-2];
 		}
 

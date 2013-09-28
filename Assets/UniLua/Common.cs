@@ -16,7 +16,9 @@ namespace UniLua
 		public const int LUAI_FIRSTPSEUDOIDX	= (-LUAI_MAXSTACK-1000);
 
 		public const string LUA_SIGNATURE = "\u001bLua";
-		public static readonly string LUA_DIRSEP = System.IO.Path.DirectorySeparatorChar.ToString();
+		public static string LUA_DIRSEP {
+			get { return System.IO.Path.DirectorySeparatorChar.ToString(); }
+		}
 	}
 
 	public static class LuaLimits

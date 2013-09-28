@@ -44,7 +44,6 @@ namespace UniLua
 		private const string LUA_EXEC_DIR	= "!";
 		private const string LUA_IGMARK		= "-";
 
-		// private static readonly string LUA_CSUBSEP = LuaConf.LUA_DIRSEP;
 		private static readonly string LUA_LSUBSEP = LuaConf.LUA_DIRSEP;
 
 		// auxiliary mark (for internal use)

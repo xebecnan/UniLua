@@ -11,12 +11,9 @@ namespace UniLua
 
 	internal static class Utl
 	{
-		private const string ERR_HEADER =
-			"UniLua出错, 请将这个错误信息转发给阿楠! 错误信息:\n";
-
 		private static void Throw( params string[] msgs )
 		{
-			throw new Exception(ERR_HEADER + String.Join("", msgs));
+			throw new Exception(String.Join("", msgs));
 		}
 
 		public static void Assert( bool condition )
