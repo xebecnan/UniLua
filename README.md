@@ -1,88 +1,120 @@
 # UniLua #
 
-A pure C# implementation of Lua 5.2 focus on compatibility with Unity3D.
-
+A pure C# implementation of Lua 5.2 focus on compatibility with Unity3D.  
 Being used in commercial MMORPG game development.
 
-## Quick Start ##
+UniLua是一个纯C#的Lua 5.2实现，专注于与Unity3D的兼容性。  
+目前正使用在我们大型多人在线角色扮演商业游戏的开发中。
 
-Open Assets\Stages\GameMain.unity and run it.
+## 示例工程 // Sample Project ##
 
-You can use WSAD keys to control the icon in this sample project.
+To demonstrate the basic use of UniLua, a sample project is included.  
+Open Assets\Stages\GameMain.unity with Unity3D, and just click the "Play" button.  
+An icon will appear in the screen, and you can move it around with WSAD keys.
 
-## Libraries ##
+项目中包含了一个微型的示例工程，用来演示 UniLua 的基本使用。  
+用 Unity3D 打开 Assets\Stages\GameMain.unity 然后直接点击播放按钮运行。  
+屏幕上会显示一个小图标，你可以用 WSAD 键控制它四处移动。
 
-*   Base lib: done
-*   Package lib: done
-*   Coroutine lib: done
-*   Table lib: done
-*   IO lib: done
-*   OS lib: not implemented
-*   String lib: partially implemented
-*   Debug lib: partially implemented
+## 开发状况 // Development Status ##
 
-## Additional Libraries ##
+* 基本特性 // Basic features
+  * 所有 Lua 的基本语言特性都已实现，包括`协程`和`元表`，并且与 Lua5.2 标准实现一致。部分 GC 相关的元方法如 `__gc` 和 `__mode` 未实现  
+    // All language features are implemented exactly the same as the standard Lua 5.2, including `coroutine` and `metatable`, except some GC-related metamethods like `__gc` and `__mode`.
+* 内置库 // Libraries
+  * Base lib: done
+  * Package lib: done
+  * Coroutine lib: done
+  * Table lib: done
+  * IO lib: not implemented
+     * 因为暂时没有需求 // not needed in our games right now
+  * OS lib: not implemented
+     * 因为暂时没有需求 // not needed in our games right now
+  * String lib: partially implemented
+     * 因为暂时没有需求 // not needed in our games right now
+  * Debug lib: partially implemented
+     * 勉强够用了 // barely enough
 
-*   FFI lib: basicly done
-*   Encoding lib: support convert between UTF-8 and UTF-16(C# builtin)
+* 额外实现的库 // Additional Libraries
+  * FFI lib: basicly done
+     * 实验性质,不建议在要求性能的环境下使用 // experimental. not suggested to use in performance-critical situation
+  * Encoding lib: basicly done
+     * 支持在 UTF-8 编码和 UTF-16 编码间进行转换 // support convert between UTF-8 and UTF-16
 
-## TODO ##
+* TODO
+  * Complete string lib.
+  * Complete debug lib.
 
-*   Complete string lib.
-*   Complete debug lib.
+* 已知的问题 // Known Issues
+  * Metamethod '__gc' will not working.
+     * 因为没有自己实现GC机制,而是依赖于C#的GC // for directly depending on C#'s GC mechanism
+  * Weak tables is not supported: '__mode' will not working.
+     * 原因同上 // the same reason mentioned above
 
-## Known Issues ##
+## 一些简单的说明 // Quick Start ##
 
-*   Metamethod '__gc' is not working.
-*   Weak tables is not supported: '__mode' is not working.
+You could use UniLua in reference to the standard Lua.  
+The syntax of Lua language is exactly the same as standard Lua.  
+So you could make use of the standard [Lua 5.2 Reference Manual](http://www.lua.org/manual/5.2/).  
 
-## 一些简单的说明 ##
+Most C API of standard Lua have a counterpart in C# API of UniLua.  
+For example, instead of using lua_pushnumber(L, 42), you can use L.PushNumber(42)  
+Interface functions defined in lua.h and lauxlib.h can be found in "**interface ILuaAPI**" defined in [LuaAPI.cs](https://github.com/xebecnan/UniLua/blob/master/Assets/UniLua/LuaAPI.cs) and "**interface ILuaAuxLib**" defined in [LuaAuxLib.cs](https://github.com/xebecnan/UniLua/blob/master/Assets/UniLua/LuaAuxLib.cs)
 
-大部分的使用是可以参考标准的 Lua 官方文档和 Lua 教程的。
-Lua 本身的语法是一样的。C API 和 C# API 之间有个对应关系。
-例如 lua_pushnumber() 这个 C API 对应到 UniLua 里就是 lua.PushNumber()
+大部分的使用是可以参考标准的 Lua 官方文档和 Lua 教程的。  
+Lua 本身的语法是完全一样的。你可以用[官方的文档](http://www.lua.org/manual/5.2/)来帮助理解和使用UniLua
 
+C API 和 C# API 之间有个对应关系。  
+例如 lua_pushnumber() 这个 C API 对应到 UniLua 里就是 lua.PushNumber()  
 所有标准 lua 中 lua.h 和 lauxlib.h 里定义的接口，都对应 <a href="https://github.com/xebecnan/UniLua/blob/master/Assets/UniLua/LuaAPI.cs">LuaAPI.cs</a> 里定义的 ILuaAPI 和 <a href="https://github.com/xebecnan/UniLua/blob/master/Assets/UniLua/LuaAuxLib.cs">LuaAuxLib.cs</a> 里定义的 ILuaAuxLib 接口。
 
 
-### 从 C# 调用 Lua ###
+### 从 C# 调用 Lua // Calling Lua function from C# ###
 
+The simplest way to call a lua global function from C#:  
 最朴素的从 C# 调用 lua 的一个全局函数的写法:
 
 <pre>
+// 相当于 lua 里一个这样的调用 foo("test", 42)
+// equal to lua code: foo("test", 42)
+
 Lua.GetGlobal( "foo" ); // 加载 lua 中定义的一个名叫 foo 的全局函数到堆栈
 Debug.Assert( Lua.IsFunction(-1) ); // 确保加载成功了, 此时栈顶是函数 foo
 Lua.PushString( "test" ); // 将第一个参数(字符串 "test")入栈
 Lua.PushInteger( 42 ); //将第二个参数(整数 42)入栈
 Lua.Call(2, 0); // 调用函数 foo, 指明有2个参数，没有返回值
-// 上面的代码相当于 lua 里一个这样的调用 foo("test", 42)
+
 </pre>
 
+More complicated examples can be found in:  
+稍微复杂一点的例子可以参考实例程序里的一些简单写法。参考：
 
-稍微复杂一点的例子可以参考实例程序里的一些简单写法：
-参考这个文件 Assets/Behaviour/LuaScriptController.cs：
-
-* <a href="https://github.com/xebecnan/UniLua/blob/master/Assets/Behaviour/LuaScriptController.cs">Assets/Behaviour/LuaScriptController.cs</a>
-* <a href="https://github.com/xebecnan/UniLua/blob/master/Assets/StreamingAssets/LuaRoot/framework/main.lua">framework/main.lua</a>
+* [Assets/Behaviour/LuaScriptController.cs](https://github.com/xebecnan/UniLua/blob/master/Assets/Behaviour/LuaScriptController.cs)
+* [framework/main.lua](https://github.com/xebecnan/UniLua/blob/master/Assets/StreamingAssets/LuaRoot/framework/main.lua)
 
 <pre>
 // 创建 Lua 虚拟机
+// create Lua VM instance
 var Lua = LuaAPI.NewState();
 
 // 加载基本库
+// load base libraries
 Lua.L_OpenLibs();
 
-// 加载 Lua 脚本文件
+// 加载并运行 Lua 脚本文件
+// load and run Lua script file
 var LuaScriptFile = "framework/main.lua";
 var status = Lua.L_DoFile( LuaScriptFile );
 
 // 捕获错误
+// capture errors
 if( status != ThreadStatus.LUA_OK )
 {
     throw new Exception( Lua.ToString(-1) );
 }
 
-// 确保 framework/main.lua 执行结果是一个 Lua Table
+// 确保 framework/main.lua 执行结果是一个 Lua table
+// ensuare the value returned by 'framework/main.lua' is a Lua table
 if( ! Lua.IsTable(-1) )
 {
   throw new Exception(
@@ -126,7 +158,8 @@ private void CallMethod( int funcRef )
 }
 </pre>
 
-### 从 Lua 调用 C# 函数 ( 使用 C# 来扩展 Lua 功能 ) ###
+### 从 Lua 调用 C# 函数 // Calling C# funcitons from Lua ###
+( 使用 C# 来扩展 Lua 功能 // extending Lua with C# )
 
 目前的示例程序是使用 FFI 库来实现的 从 Lua 调用 C# 函数。
 FFI 因为用到了反射机制来调用 C# 函数，性能会比较低。
