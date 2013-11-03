@@ -21,7 +21,7 @@ An icon will appear in the screen, and you can move it around with WSAD keys.
 * 基本特性 ( Basic features )
   * 所有 Lua 的基本语言特性都已实现，包括`协程`和`元表`，并且与 Lua5.2 标准实现一致。部分 GC 相关的元方法如 `__gc` 和 `__mode` 未实现  
     ( All language features are implemented exactly the same as the standard Lua 5.2, including `coroutine` and `metatable`, except some GC-related metamethods like `__gc` and `__mode`. )
-* 内置库 // Libraries
+* 内置库 ( Libraries )
   * Base lib: done
   * Package lib: done
   * Coroutine lib: done
