@@ -8,38 +8,16 @@ using ULDebug = UniLua.Tools.ULDebug;
 
 namespace UniLua
 {
-	using PlatformCfg = PlatformCfgX32;
-	using SizeT = UInt32;
-	// using PlatformCfg = PlatformCfgX64;
-	// using SizeT = UInt64;
-
-	internal static class PlatformCfgX64
-	{
-		public const int SizeTypeLength = 8;
-
-		public static UInt64 ToSizeT( byte[] bytes, int pos )
-		{
-			return BitConverter.ToUInt64( bytes, pos );
-		}
-	}
-
-	internal static class PlatformCfgX32
-	{
-		public const int SizeTypeLength = 4;
-
-		public static UInt32 ToSizeT( byte[] bytes, int pos )
-		{
-			return BitConverter.ToUInt32( bytes, pos );
-		}
-	}
-
 	public class BinaryBytesReader
 	{
-		private ILoadInfo 	LoadInfo;
+		private ILoadInfo LoadInfo;
+		public int SizeOfSizeT;
+
 
 		public BinaryBytesReader( ILoadInfo loadinfo )
 		{
-			LoadInfo 	= loadinfo;
+			LoadInfo = loadinfo;
+			SizeOfSizeT = 0;
 		}
 
 		public byte[] ReadBytes( int count )
@@ -84,14 +62,22 @@ namespace UniLua
 			return ret;
 		}
 
-		public SizeT ReadSizeT()
+		public int ReadSizeT()
 		{
-			var bytes = ReadBytes( PlatformCfg.SizeTypeLength );
-			var ret = PlatformCfg.ToSizeT( bytes, 0 );
+			if( SizeOfSizeT <= 0) {
+				throw new Exception("sizeof(size_t) is not valid:" + SizeOfSizeT);
+			}
+
+			var bytes = ReadBytes( SizeOfSizeT );
+			var ret = BitConverter.ToUInt64( bytes, 0 );
 #if DEBUG_BINARY_READER
 			ULDebug.Log( "ReadSizeT: " + ret );
 #endif
-			return ret;
+
+			if( ret > Int32.MaxValue )
+				throw new NotImplementedException();
+
+			return (int)ret;
 		}
 
 		public double ReadDouble()
@@ -117,7 +103,7 @@ namespace UniLua
 
 		public string ReadString()
 		{
-			var n = (int)ReadSizeT();
+			var n = ReadSizeT();
 			if( n == 0 )
 				return null;
 
@@ -144,6 +130,9 @@ namespace UniLua
 
 	public class Undump
 	{
+		private BinaryBytesReader Reader;
+
+
 		public static LuaProto LoadBinary( ILuaState lua,
 			ILoadInfo loadinfo, string name )
 		{
@@ -164,18 +153,10 @@ namespace UniLua
 			}
 		}
 
-		private BinaryBytesReader 	Reader;
-
 		private Undump( BinaryBytesReader reader )
 		{
 			Reader 	= reader;
 		}
-
-		// private LuaProto Load()
-		// {
-		// 	LoadHeader();
-		// 	return LoadFunction();
-		// }
 
 		private int LoadInt()
 		{
@@ -209,10 +190,17 @@ namespace UniLua
 
 		private void LoadHeader()
 		{
-			LoadBytes( 4 // Signature
+			byte[] header = LoadBytes( 4 // Signature
 				+ 8 // version, format version, size of int ... etc
 				+ 6 // Tail
 			);
+			byte v = header[ 4 /* skip signature */
+						   + 4 /* offset of sizeof(size_t) */
+						   ];
+#if DEBUG_UNDUMP
+			ULDebug.Log(string.Format("sizeof(size_t): {0}", v));
+#endif
+			Reader.SizeOfSizeT = v ;
 		}
 
 		private Instruction LoadInstruction()
