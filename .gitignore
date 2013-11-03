@@ -113,6 +113,8 @@ UpgradeLog*.XML
 /Assembly-CSharp-vs.csproj
 /Assembly-CSharp.csproj
 /Assembly-CSharp.pidb
+/Assembly-CSharp-Editor-vs.csproj
+/Assembly-CSharp-Editor.csproj
 /*.sln
 /*.userprefs
 /Temp
