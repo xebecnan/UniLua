@@ -69,7 +69,18 @@ namespace UniLua
 			}
 
 			var bytes = ReadBytes( SizeOfSizeT );
-			var ret = BitConverter.ToUInt64( bytes, 0 );
+			UInt64 ret;
+			switch( SizeOfSizeT ) {
+				case 4:
+					ret = BitConverter.ToUInt32( bytes, 0 );
+					break;
+				case 8:
+					ret = BitConverter.ToUInt64( bytes, 0 );
+					break;
+				default:
+					throw new NotImplementedException();
+			}
+
 #if DEBUG_BINARY_READER
 			ULDebug.Log( "ReadSizeT: " + ret );
 #endif
