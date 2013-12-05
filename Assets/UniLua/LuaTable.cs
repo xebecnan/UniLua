@@ -5,6 +5,8 @@ using System.Collections.Generic;
 
 namespace UniLua
 {
+	using ULDebug = UniLua.Tools.ULDebug;
+
 	public class LuaTable {
 		public LuaTable MetaTable;
 		// public int Length { get; private set; }
@@ -39,9 +41,12 @@ namespace UniLua
 			if(0 < key && key-1 < ArrayPart.Length)
 				{ return ArrayPart[key-1]; }
 
-			for(var node = GetHashNode(key); node != null; node = node.Next) {
-				if(node.Key.V.TtIsNumber() && node.Key.V.NValue == (double)key)
-					{ return node.Val; }
+			var k = new TValue();
+			k.SetNValue(key);
+			for(var node = GetHashNode(ref k); node != null; node = node.Next) {
+				if(node.Key.V.TtIsNumber() && node.Key.V.NValue == (double)key) {
+					return node.Val;
+				}
 			}
 
 			return TheNilValue;
@@ -76,6 +81,8 @@ namespace UniLua
 				cell = NewTableKey(ref k);
 			}
 			cell.V.SetObj(ref val);
+			// ULDebug.Log(string.Format("---------------- SetInt {0} -> {1}", key, val));
+			// DumpParts();
 		}
 
 		/*
@@ -428,6 +435,23 @@ namespace UniLua
 			totaluse++;
 			int na = ComputeSizes(ref nums, ref nasize);
 			Resize(nasize, totaluse-na);
+		}
+
+		private void DumpParts()
+		{
+			ULDebug.Log("------------------ [DumpParts] enter -----------------------");
+			ULDebug.Log("<< Array Part >>");
+			for(var i=0; i<ArrayPart.Length; ++i) {
+				var n = ArrayPart[i];
+				ULDebug.Log(string.Format("i:{0} val:{1}", i, n.V));
+			}
+			ULDebug.Log("<< Hash Part >>");
+			for(var i=0; i<HashPart.Length; ++i) {
+				var n = HashPart[i];
+				var next = (n.Next == null) ? -1 : n.Next.Index;
+				ULDebug.Log(string.Format("i:{0} index:{1} key:{2} val:{3} next:{4}", i, n.Index, n.Key.V, n.Val.V, next));
+			}
+			ULDebug.Log("++++++++++++++++++ [DumpParts] leave +++++++++++++++++++++++");
 		}
 
 		private StkId NewTableKey(ref TValue k)

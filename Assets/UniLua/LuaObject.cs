@@ -194,6 +194,19 @@ namespace UniLua
 			UInt64Value = CLOSURE_LCS;
 			OValue = v;
 		}
+
+		public override string ToString()
+		{
+			if (TtIsString()) {
+				return string.Format("(string, {0})", SValue());
+			} else if (TtIsNumber()) {
+				return string.Format("(number, {0})", NValue);
+			} else if (TtIsNil()) {
+				return "(nil)";
+			} else {
+				return string.Format("(type:{0})", Tt);
+			}
+		}
 	}
 
 	public class StkId
