@@ -1,10 +1,8 @@
 # UniLua #
 
 A pure C# implementation of Lua 5.2 focus on compatibility with Unity3D.  
-Being used in commercial MMORPG game development.
 
 UniLua是一个纯C#的Lua 5.2实现，专注于与Unity3D的兼容性。  
-目前正使用在我们大型多人在线角色扮演商业游戏的开发中。
 
 ## 示例工程 ( Sample Project ) ##
 
@@ -50,6 +48,7 @@ An icon will appear in the screen, and you can move it around with WSAD keys.
      * 因为没有自己实现GC机制,而是依赖于C#的GC ( for directly depending on C#'s GC mechanism )
   * Weak tables is not supported: '__mode' will not working.
      * 原因同上 ( the same reason mentioned above )
+  * full userdata is not supported
 
 ## 常用链接 ( Links )##
 
