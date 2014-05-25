@@ -1211,6 +1211,8 @@ calltm:
 					return true;
 				case (int)LuaType.LUA_TNUMBER:
 					return t1.NValue == t2.NValue;
+				case (int)LuaType.LUA_TUINT64:
+					return t1.UInt64Value == t2.UInt64Value;
 				case (int)LuaType.LUA_TBOOLEAN:
 					return t1.BValue() == t2.BValue();
 				case (int)LuaType.LUA_TSTRING:
@@ -1238,7 +1240,7 @@ calltm:
 					break;
 				}
 				default:
-					return System.Object.ReferenceEquals( t1, t2 );
+					return t1.OValue == t2.OValue;
 			}
 			if( tm == null ) // no TM?
 				return false;
