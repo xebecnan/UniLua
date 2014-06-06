@@ -1,19 +1,31 @@
 ﻿
 // #define DEBUG_DUMMY_TVALUE_MODIFY
 
+using System;
 using System.Collections.Generic;
 
 namespace UniLua
 {
 	using ULDebug = UniLua.Tools.ULDebug;
 
-	public class LuaTable {
+	public class LuaTable : IDisposable {
 		public LuaTable MetaTable;
 		// public int Length { get; private set; }
 		public uint NoTagMethodFlags;
 
 		public LuaTable(LuaState l) {
 			InitLuaTable(l);
+		}
+
+		public void Dispose()
+		{
+			Recycle();
+			GC.SuppressFinalize(this);
+		}
+
+		~LuaTable()
+		{
+			Recycle();
 		}
 
 		public StkId Get(ref TValue key)
@@ -190,6 +202,9 @@ namespace UniLua
 					Set(ref node.Key.V, ref node.Val.V);
 				}
 			}
+
+			if (oldHashPart != DummyHashPart)
+				RecycleHNode(oldHashPart);
 		}
 
 		//-----------------------------------------
@@ -247,6 +262,90 @@ namespace UniLua
 			DummyHashPart[0].Index = 0;
 		}
 
+		#region Small Object Cache
+		private static HNode CacheRoot = null;
+		private static LinkedList<StkId> StkIdCache = new LinkedList<StkId>();
+
+		private void Recycle()
+		{
+			if (HashPart == null || HashPart == DummyHashPart)
+				return;
+			RecycleHNode(HashPart);
+			HashPart = null;
+
+			RecycleStkId();
+			ArrayPart = null;
+		}
+
+		private void RecycleStkId()
+		{
+			if (ArrayPart == null || ArrayPart.Length == 0)
+				return;
+
+			for (int i = 0; i < ArrayPart.Length; i++)
+			{
+				StkIdCache.AddLast(ArrayPart[i]);
+			}
+			ArrayPart = null;
+		}
+
+		private StkId NewStkId()
+		{
+			if (StkIdCache.Count == 0)
+				return new StkId();
+			else
+			{
+				var ret = StkIdCache.First.Value;
+				StkIdCache.RemoveFirst();
+				return ret;
+			}
+		}
+
+		private void RecycleHNode(HNode[] garbage)
+		{
+			if (garbage == null || garbage.Length == 0)
+				return;
+
+			if (garbage.Length > 1)
+			{
+				for (int i = 0; i < garbage.Length-1; i++)
+				{
+					garbage[i].Next = garbage[i + 1];
+				}
+			}
+			garbage[garbage.Length - 1].Next = null;
+
+			if (CacheRoot != null)
+			{
+				garbage[garbage.Length - 1].Next = CacheRoot;
+			}
+			CacheRoot = garbage[0];
+		}
+
+		private HNode NewHNode()
+		{
+			HNode ret;
+			if (CacheRoot == null)
+				ret = new HNode();
+			else
+			{
+				ret = CacheRoot;
+				CacheRoot = CacheRoot.Next;
+			}
+			ret.Next = null;
+			ret.Index = 0;
+
+			if (ret.Key == null)
+				ret.Key = NewStkId();
+			ret.Key.V.SetNilValue();
+			if (ret.Val == null)
+				ret.Val = NewStkId();
+			ret.Val.V.SetNilValue();
+
+			return ret;
+		}
+		#endregion
+
 		private void InitLuaTable(LuaState lua)
 		{
 			L = lua;
@@ -284,7 +383,7 @@ namespace UniLua
 				newArrayPart[i] = ArrayPart[i];
 			}
 			for( ; i<size; ++i) {
-				newArrayPart[i] = new StkId();
+				newArrayPart[i] = NewStkId();
 				newArrayPart[i].V.SetNilValue();
 			}
 			ArrayPart = newArrayPart;
@@ -304,13 +403,8 @@ namespace UniLua
 			size = (1 << lsize);
 			HashPart = new HNode[size];
 			for(int i=0; i<size; ++i) {
-				HashPart[i] = new HNode();
+				HashPart[i] = NewHNode();
 				HashPart[i].Index = i;
-				HashPart[i].Key = new StkId();
-				HashPart[i].Key.V.SetNilValue();
-				HashPart[i].Val = new StkId();
-				HashPart[i].Val.V.SetNilValue();
-				HashPart[i].Next = null;
 			}
 			LastFree = size;
 		}
@@ -423,17 +517,17 @@ namespace UniLua
 			return na;
 		}
 
+		private static int[] Nums = new int[MAXBITS + 1];
 		private void Rehash(ref TValue k)
 		{
-			int[] nums = new int[MAXBITS+1];
-			for(int i=0; i<=MAXBITS; ++i) { nums[i] = 0; }
+			for(int i=0; i<=MAXBITS; ++i) { Nums[i] = 0; }
 
-			int nasize = NumUseArray(ref nums);
+			int nasize = NumUseArray(ref Nums);
 			int totaluse = nasize;
-			totaluse += NumUseHash(ref nums, ref nasize);
-			nasize += CountInt(ref k, ref nums);
+			totaluse += NumUseHash(ref Nums, ref nasize);
+			nasize += CountInt(ref k, ref Nums);
 			totaluse++;
-			int na = ComputeSizes(ref nums, ref nasize);
+			int na = ComputeSizes(ref Nums, ref nasize);
 			Resize(nasize, totaluse-na);
 		}
 
@@ -505,7 +599,7 @@ namespace UniLua
 				j *= 2;
 
 				// overflow?
-				if(j > LuaLimits.MAX_INT) { 
+				if(j > LuaLimits.MAX_INT) {
 					/* table was built with bad purposes: resort to linear search */
 					i = 1;
 					while(!GetInt((int)i).V.TtIsNil()) { i++; }
