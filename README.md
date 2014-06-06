@@ -50,6 +50,17 @@ An icon will appear in the screen, and you can move it around with WSAD keys.
      * 原因同上 ( the same reason mentioned above )
   * full userdata is not supported
 
+## SciMark ##
+
+test on Unity3D 4.3.1, Windows 7, Intel i5-3470
+
+* FFT 1.07  [1024]
+* SOR 2.51  [100]
+* MC 0.66
+* SPARSE 1.59  [1000, 5000]
+* LU 1.84  [100]
+* SciMark 1.53  [small problem sizes]
+
 ## 常用链接 ( Links )##
 
 * [Wiki首页 (Wiki Homepage)](https://github.com/xebecnan/UniLua/wiki)
