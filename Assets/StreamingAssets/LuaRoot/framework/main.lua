@@ -7,6 +7,7 @@ end
 
 local function start()
     print("---- start ----")
+    print(table.concat{"hello", ":", "UniLua"})
     SceneMgr.init_scene()
 end
 

@@ -17,8 +17,6 @@ namespace UniLua
 		}
 	}
 
-	public delegate T OptFuncDelegate<T>( int n );
-
 	public interface ILuaAuxLib
 	{
 		void 	L_Where( int level );
@@ -45,7 +43,7 @@ namespace UniLua
 		void	L_NewLib( NameFuncPair[] define );
 		void 	L_SetFuncs( NameFuncPair[] define, int nup );
 		
-		T 		L_Opt<T>( OptFuncDelegate<T> f, int n, T def );
+		T 		L_Opt<T>( Func<int,T> f, int n, T def );
 		int		L_OptInt( int narg, int def );
 		string 	L_OptString( int narg, string def );
 		bool 	L_CallMeta( int obj, string name );
@@ -214,7 +212,7 @@ namespace UniLua
 			return d;
 		}
 
-		public T L_Opt<T>( OptFuncDelegate<T> f, int n, T def )
+		public T L_Opt<T>( Func<int,T> f, int n, T def )
 		{
 			LuaType t = API.Type( n );
 			if( t == LuaType.LUA_TNONE ||
@@ -722,6 +720,14 @@ namespace UniLua
 				API.RawSetI(t, FreeList); // t[freelist] = ref
 			}
 		}
+
+#if UNITY_IPHONE
+        public void FEED_AOT_FOR_IOS(LuaState lua)
+        {
+            lua.L_Opt( lua.L_CheckInteger, 1, 1);
+        }
+#endif
+
 	}
 
 }
