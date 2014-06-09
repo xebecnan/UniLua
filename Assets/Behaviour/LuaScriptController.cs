@@ -46,6 +46,8 @@ public class LuaScriptController : MonoBehaviour {
 		CallMethod( AwakeRef );
 	}
 
+// AssetBundle testx.unity3d is built for StandaloneWindows
+#if UNITY_STANDALONE
 	IEnumerator Start() {
 		CallMethod( StartRef );
 
@@ -68,6 +70,11 @@ public class LuaScriptController : MonoBehaviour {
 			Debug.Log("---- call done ----");
 		}
 	}
+#else
+	void Start() {
+		CallMethod( StartRef );
+	}
+#endif
 
 	void Update() {
 		CallMethod( UpdateRef );
