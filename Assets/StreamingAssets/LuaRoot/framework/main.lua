@@ -7,7 +7,13 @@ end
 
 local function start()
     print("---- start ----")
+
     print(table.concat{"hello", ":", "UniLua"})
+
+    local a = 10
+    local b = tostring(a)
+    print(type(a), type(b))
+
     SceneMgr.init_scene()
 end
 

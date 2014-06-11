@@ -1404,12 +1404,16 @@ namespace UniLua
 			if(addr.V.TtIsString()) {
 				return addr.V.OValue as string;
 			}
-			else if(addr.V.TtIsNumber()) {
-				return addr.V.NValue.ToString();
-			}
-			else {
+
+			if(!V_ToString(ref addr.V)) {
 				return null;
 			}
+
+			if( !Index2Addr( index, out addr ) )
+				return null;
+
+			Utl.Assert(addr.V.TtIsString());
+			return addr.V.OValue as string;
 		}
 
 		double ILuaAPI.ToNumberX( int index, out bool isnum )
