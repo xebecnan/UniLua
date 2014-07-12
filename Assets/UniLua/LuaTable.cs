@@ -8,19 +8,12 @@ namespace UniLua
 {
 	using ULDebug = UniLua.Tools.ULDebug;
 
-	public class LuaTable : IDisposable {
+	public class LuaTable {
 		public LuaTable MetaTable;
-		// public int Length { get; private set; }
 		public uint NoTagMethodFlags;
 
 		public LuaTable(LuaState l) {
 			InitLuaTable(l);
-		}
-
-		public void Dispose()
-		{
-			Recycle();
-			GC.SuppressFinalize(this);
 		}
 
 		~LuaTable()
@@ -263,41 +256,15 @@ namespace UniLua
 		}
 
 		#region Small Object Cache
-		private static HNode CacheRoot = null;
-		private static LinkedList<StkId> StkIdCache = new LinkedList<StkId>();
+		private static HNode CacheHead = null;
+		private static object CacheHeadLock = new Object();
 
 		private void Recycle()
 		{
-			if (HashPart == null || HashPart == DummyHashPart)
-				return;
-			RecycleHNode(HashPart);
-			HashPart = null;
-
-			RecycleStkId();
-			ArrayPart = null;
-		}
-
-		private void RecycleStkId()
-		{
-			if (ArrayPart == null || ArrayPart.Length == 0)
-				return;
-
-			for (int i = 0; i < ArrayPart.Length; i++)
+			if (HashPart != null && HashPart != DummyHashPart)
 			{
-				StkIdCache.AddLast(ArrayPart[i]);
-			}
-			ArrayPart = null;
-		}
-
-		private StkId NewStkId()
-		{
-			if (StkIdCache.Count == 0)
-				return new StkId();
-			else
-			{
-				var ret = StkIdCache.First.Value;
-				StkIdCache.RemoveFirst();
-				return ret;
+				RecycleHNode(HashPart);
+				HashPart = null;
 			}
 		}
 
@@ -306,41 +273,37 @@ namespace UniLua
 			if (garbage == null || garbage.Length == 0)
 				return;
 
-			if (garbage.Length > 1)
+			for (int i = 0; i < garbage.Length-1; i++)
 			{
-				for (int i = 0; i < garbage.Length-1; i++)
-				{
-					garbage[i].Next = garbage[i + 1];
-				}
+				garbage[i].Next = garbage[i + 1];
 			}
-			garbage[garbage.Length - 1].Next = null;
 
-			if (CacheRoot != null)
-			{
-				garbage[garbage.Length - 1].Next = CacheRoot;
+			lock(CacheHeadLock) {
+				garbage[garbage.Length - 1].Next = CacheHead;
+				CacheHead = garbage[0];
 			}
-			CacheRoot = garbage[0];
 		}
 
 		private HNode NewHNode()
 		{
 			HNode ret;
-			if (CacheRoot == null)
+			if (CacheHead == null)
+			{
 				ret = new HNode();
+				ret.Key = new StkId();
+				ret.Val = new StkId();
+			}
 			else
 			{
-				ret = CacheRoot;
-				CacheRoot = CacheRoot.Next;
+				lock(CacheHeadLock) {
+					ret = CacheHead;
+					CacheHead = CacheHead.Next;
+				}
+				ret.Next = null;
+				ret.Index = 0;
+				ret.Key.V.SetNilValue();
+				ret.Val.V.SetNilValue();
 			}
-			ret.Next = null;
-			ret.Index = 0;
-
-			if (ret.Key == null)
-				ret.Key = NewStkId();
-			ret.Key.V.SetNilValue();
-			if (ret.Val == null)
-				ret.Val = NewStkId();
-			ret.Val.V.SetNilValue();
 
 			return ret;
 		}
@@ -383,7 +346,7 @@ namespace UniLua
 				newArrayPart[i] = ArrayPart[i];
 			}
 			for( ; i<size; ++i) {
-				newArrayPart[i] = NewStkId();
+				newArrayPart[i] = new StkId();
 				newArrayPart[i].V.SetNilValue();
 			}
 			ArrayPart = newArrayPart;
