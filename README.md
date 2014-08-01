@@ -4,6 +4,13 @@ A pure C# implementation of Lua 5.2 focus on compatibility with Unity3D.
 
 UniLua是一个纯C#的Lua 5.2实现，专注于与Unity3D的兼容性。  
 
+## 一些补充说明
+
+UniLua 主要关注的还是对 lua 本身的实现，而不是怎么把 Unity3D 引擎提供的功能都引入到 lua 里。
+
+从 lua 调用 C# 函数不建议使用 FFI 库(虽然示例工程里用了，看起来方便，但是并不完善，效率也不好)。建议参考 [从 Lua 调用 C# 函数 ( Calling C# funcitons from Lua )](https://github.com/xebecnan/UniLua/wiki/%E4%BB%8E-Lua-%E8%B0%83%E7%94%A8-C%23-%E5%87%BD%E6%95%B0-%28-Calling-C%23-funcitons-from-Lua-%29) 来自己实现封装函数。
+
+
 ## 示例工程 ( Sample Project ) ##
 
 To demonstrate the basic use of UniLua, a sample project is included.  
