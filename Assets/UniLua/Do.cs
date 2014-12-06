@@ -320,7 +320,7 @@ namespace UniLua
 
 		private void D_ReallocStack(int size)
 		{
-			Utl.Assert(size < LuaConf.LUAI_MAXSTACK || size == ERRORSTACKSIZE);
+			Utl.Assert(size <= LuaConf.LUAI_MAXSTACK || size == ERRORSTACKSIZE);
 			var newStack = new StkId[size];
 			int i = 0;
 			for( ; i<Stack.Length; ++i) {
