@@ -386,7 +386,7 @@ namespace UniLua
 				{
 					if( p+1 == ms.PatternEnd ) // is the `$' the last char in pattern?
 						return (s == ms.SrcEnd) ? s : -1; // check end of string
-					else goto dflt;
+					else goto default;
 				}
 				case L_ESC: // escaped sequences not in the format class[*+?-]?
 				{
