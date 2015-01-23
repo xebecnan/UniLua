@@ -6,9 +6,12 @@ using UnityEngine;
 
 namespace UniLua
 {
-	internal class LuaFile
+	public class LuaFile
 	{
-		private static readonly string LUA_ROOT = System.IO.Path.Combine(Application.streamingAssetsPath, "LuaRoot");
+		private static string LUA_ROOT = System.IO.Path.Combine(Application.streamingAssetsPath, "LuaRoot");
+    public void SetLuaRoot(string path) {
+      LUA_ROOT = System.IO.Path.Combine(path, "LuaRoot");
+    }
 
 		public static FileLoadInfo OpenFile( string filename )
 		{
@@ -30,7 +33,7 @@ namespace UniLua
 		}
 	}
 
-	internal class FileLoadInfo : ILoadInfo, IDisposable
+	public class FileLoadInfo : ILoadInfo, IDisposable
 	{
 		public FileLoadInfo( FileStream stream )
 		{
