@@ -38,7 +38,7 @@ namespace UniLua
 			string sep = lua.L_OptString( 2, "" );
 			lua.L_CheckType( 1, LuaType.LUA_TTABLE );
 			int i = lua.L_OptInt( 3, 1 );
-			int last = lua.L_Opt( lua.L_CheckInteger, 4, lua.L_Len(1) );
+			int last = lua.L_OptInt( 4, lua.L_Len(1) );
 
 			StringBuilder sb = new StringBuilder();
 			for( ; i<last; ++i )
