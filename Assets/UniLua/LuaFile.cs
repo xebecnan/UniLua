@@ -42,7 +42,8 @@ namespace UniLua
 		public FileLoadInfo( FileStream stream )
 		{
 			Stream = stream;
-			Buf = new Queue<byte>();
+      Reader = new StreamReader(Stream, System.Text.Encoding.UTF8);
+			Buf = new Queue<char>();
 		}
 
 		public int ReadByte()
@@ -50,7 +51,7 @@ namespace UniLua
 			if( Buf.Count > 0 )
 				return (int)Buf.Dequeue();
 			else
-				return Stream.ReadByte();
+				return Reader.Read();
 		}
 
 		public int PeekByte()
@@ -59,24 +60,26 @@ namespace UniLua
 				return (int)Buf.Peek();
 			else
 			{
-				var c = Stream.ReadByte();
+				var c = Reader.Read();
 				if( c == -1 )
 					return c;
-				Save( (byte)c );
+				Save( (char)c );
 				return c;
 			}
 		}
 
 		public void Dispose()
 		{
+      Reader.Dispose();
 			Stream.Dispose();
 		}
 
 		private const string UTF8_BOM = "\u00EF\u00BB\u00BF";
 		private FileStream 	Stream;
-		private Queue<byte>	Buf;
+		private StreamReader 	Reader;
+		private Queue<char>	Buf;
 
-		private void Save( byte b )
+		private void Save( char b )
 		{
 			Buf.Enqueue( b );
 		}
@@ -86,6 +89,7 @@ namespace UniLua
 			Buf.Clear();
 		}
 
+#if false
 		private int SkipBOM()
 		{
 			for( var i=0; i<UTF8_BOM.Length; ++i )
@@ -93,28 +97,29 @@ namespace UniLua
 				var c = Stream.ReadByte();
 				if(c == -1 || c != (byte)UTF8_BOM[i])
 					return c;
-				Save( (byte)c );
+				Save( (char)c );
 			}
 			// perfix matched; discard it
 			Clear();
 			return Stream.ReadByte();
 		}
+#endif
 
 		public void SkipComment()
 		{
-			var c = SkipBOM();
+			var c = Reader.Read();//SkipBOM();
 
 			// first line is a comment (Unix exec. file)?
 			if( c == '#' )
 			{
 				do {
-					c = Stream.ReadByte();
+					c = Reader.Read();
 				} while( c != -1 && c != '\n' );
-				Save( (byte)'\n' ); // fix line number
+				Save( (char)'\n' ); // fix line number
 			}
 			else if( c != -1 )
 			{
-				Save( (byte)c );
+				Save( (char)c );
 			}
 		}
 	}
