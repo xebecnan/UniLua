@@ -159,7 +159,7 @@ namespace UniLua
 		{
 			lua.L_CheckType( 1, LuaType.LUA_TTABLE );
 			int i = lua.L_OptInt( 2, 1 );
-			int e = lua.L_Opt( lua.L_CheckInteger, 3, lua.L_Len(1) );
+			int e = lua.L_OptInt( 3, lua.L_Len(1) );
 			if( i > e ) return 0; // empty range
 			int n = e - i + 1; // number of elements
 			if( n <= 0 || !lua.CheckStack(n) ) // n <= 0 means arith. overflow
