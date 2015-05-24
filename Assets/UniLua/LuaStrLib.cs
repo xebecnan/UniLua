@@ -199,7 +199,7 @@ namespace UniLua
 		private static bool MatchClass( char c, char cl )
 		{
 			bool res;
-			switch(cl)
+			switch(Char.ToLower (cl))
 			{
 				case 'a': res = Char.IsLetter(c); break;
 				case 'c': res = Char.IsControl(c); break;
@@ -214,7 +214,7 @@ namespace UniLua
 				case 'z': res = (c == '\0'); break;  /* deprecated option */
 				default: return (cl == c);
 			}
-			return res;
+			return (Char.IsLower (cl) ? res : !res);
 		}
 
 		private static bool MatchBreaketClass( MatchState ms, char c, int p, int ec )
