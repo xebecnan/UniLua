@@ -78,3 +78,11 @@ test on Unity3D 4.3.1, Windows 7, Intel i5-3470
   * [UTF-8 support](https://github.com/xebecnan/UniLua/wiki/Utf-8-support)
   * [Reference: Lua functions](https://github.com/xebecnan/UniLua/wiki/Lua-functions)
   * [Reference: C# API](https://github.com/xebecnan/UniLua/wiki/C%23-API)
+* 文章 Articles
+  * [从零开始实现 Lua 虚拟机 ( UniLua 开发过程 )](https://zhuanlan.zhihu.com/p/22476315)
+  * [Unity3D游戏开发之Lua与游戏的不解之缘](http://blog.csdn.net/qinyuanpei/article/details/40050225)
+  * [unityでuniluaを使ってADV機能を実装する](http://qiita.com/masakam1/items/62d6e5968443836689c2)
+  * [Создание игры на ваших глазах — часть 3: Прикручиваем скриптовый язык к Unity (UniLua)](https://habrahabr.ru/post/211576/)
+* 替代品 Replacement
+  * [Moon#](http://www.moonsharp.org/) Based on Lua 5.2
+  * [KopiLua](http://www.ppl-pilot.com/KopiLua.aspx) based on Lua 5.1.4
