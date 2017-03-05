@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="3.5" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{AF32D0F4-B22C-409E-A9F4-ABF35448F655}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>dllproj</RootNamespace>
+    <AssemblyName>UniLua</AssemblyName>
+    <TargetFrameworkVersion>v3.0</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>True</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>False</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <ConsolePause>False</ConsolePause>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>none</DebugType>
+    <Optimize>True</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <ConsolePause>False</ConsolePause>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="UnityEngine">
+      <HintPath>..\..\..\..\..\Applications\Unity46\Unity.app\Contents\Frameworks\Managed\UnityEngine.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="..\Assets\UniLua\ByteString.cs">
+      <Link>ByteString.cs</Link>
+    </Compile>
+    <Compile Include="..\Assets\UniLua\Coder.cs" />
+    <Compile Include="..\Assets\UniLua\Common.cs" />
+    <Compile Include="..\Assets\UniLua\Do.cs" />
+    <Compile Include="..\Assets\UniLua\Dump.cs">
+      <Link>Dump.cs</Link>
+    </Compile>
+    <Compile Include="..\Assets\UniLua\LLex.cs" />
+    <Compile Include="..\Assets\UniLua\LuaAPI.cs" />
+    <Compile Include="..\Assets\UniLua\LuaAuxLib.cs" />
+    <Compile Include="..\Assets\UniLua\LuaBaseLib.cs" />
+    <Compile Include="..\Assets\UniLua\LuaBitLib.cs" />
+    <Compile Include="..\Assets\UniLua\LuaCoroLib.cs" />
+    <Compile Include="..\Assets\UniLua\LuaDebug.cs" />
+    <Compile Include="..\Assets\UniLua\LuaDebugLib.cs" />
+    <Compile Include="..\Assets\UniLua\LuaEncLib.cs" />
+    <Compile Include="..\Assets\UniLua\LuaFFILib.cs" />
+    <Compile Include="..\Assets\UniLua\LuaFile.cs" />
+    <Compile Include="..\Assets\UniLua\LuaFunc.cs" />
+    <Compile Include="..\Assets\UniLua\LuaIOLib.cs" />
+    <Compile Include="..\Assets\UniLua\LuaMathLib.cs" />
+    <Compile Include="..\Assets\UniLua\LuaObject.cs" />
+    <Compile Include="..\Assets\UniLua\LuaOsLib.cs" />
+    <Compile Include="..\Assets\UniLua\LuaPkgLib.cs" />
+    <Compile Include="..\Assets\UniLua\LuaState.cs" />
+    <Compile Include="..\Assets\UniLua\LuaStrLib.cs" />
+    <Compile Include="..\Assets\UniLua\LuaTable.cs" />
+    <Compile Include="..\Assets\UniLua\LuaTableLib.cs" />
+    <Compile Include="..\Assets\UniLua\OpCodes.cs" />
+    <Compile Include="..\Assets\UniLua\Parser.cs" />
+    <Compile Include="..\Assets\UniLua\TagMethod.cs" />
+    <Compile Include="..\Assets\UniLua\ULDebug.cs" />
+    <Compile Include="..\Assets\UniLua\Undump.cs" />
+    <Compile Include="..\Assets\UniLua\Util.cs" />
+    <Compile Include="..\Assets\UniLua\VM.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+</Project>
