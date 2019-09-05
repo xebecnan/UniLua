@@ -261,5 +261,9 @@ namespace UniLua {
         return string.Format("(type:{0})", Tt);
       }
     }
+
+    public static TValue Clone(TValue other) {
+      return (TValue)other.MemberwiseClone();
+    }
   }
 }
