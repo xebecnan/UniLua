@@ -1,3 +1,3 @@
 ﻿namespace UniLua {
-  public delegate int CSharpFunctionDelegate(ILuaState state);
+  public delegate int CSharpFunctionDelegate(LuaState state);
 }

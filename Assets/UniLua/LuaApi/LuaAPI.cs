@@ -4,7 +4,7 @@
 
 namespace UniLua {
   public static class LuaAPI {
-    public static ILuaState NewState() {
+    public static LuaState NewState() {
       return new LuaState();
     }
   }

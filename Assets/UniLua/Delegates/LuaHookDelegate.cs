@@ -1,3 +1,3 @@
 ﻿namespace UniLua {
-  public delegate void LuaHookDelegate(ILuaState lua, LuaDebug ar);
+  public delegate void LuaHookDelegate(LuaState lua, LuaDebug ar);
 }
