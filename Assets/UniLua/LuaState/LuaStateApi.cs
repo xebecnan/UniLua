@@ -4,7 +4,7 @@ namespace UniLua
 {
   public partial class LuaState : ILuaState
   {
-    LuaState ILuaAPI.NewThread()
+    public LuaState NewThread()
     {
       LuaState newLua = new LuaState(G);
       Top.V.SetThValue(newLua);
@@ -37,7 +37,7 @@ namespace UniLua
     // 	IncrTop();
     // }
 
-    // ThreadStatus ILuaAPI.LoadBinary( byte[] bytes )
+    // ThreadStatus LoadBinary( byte[] bytes )
     // {
     // 	var status = D_PCall( F_LoadBinary, bytes, Top, ErrFunc );
 
@@ -105,7 +105,7 @@ namespace UniLua
     }
     private static PFuncDelegate<LoadParameter> DG_F_Load = F_Load;
 
-    ThreadStatus ILuaAPI.Load(ILoadInfo loadinfo, string name, string mode)
+    public ThreadStatus Load(ILoadInfo loadinfo, string name, string mode)
     {
       var param = new LoadParameter(this, loadinfo, name, mode);
       var status = D_PCall(DG_F_Load, ref param, Top.Index, ErrFunc);
@@ -125,7 +125,7 @@ namespace UniLua
       return status;
     }
 
-    DumpStatus ILuaAPI.Dump(LuaWriter writeFunc)
+    public DumpStatus Dump(LuaWriter writeFunc)
     {
       Utl.ApiCheckNumElems(this, 1);
 
@@ -140,7 +140,7 @@ namespace UniLua
       return DumpState.Dump(o.Proto, writeFunc, false);
     }
 
-    ThreadStatus ILuaAPI.GetContext(out int context)
+    public ThreadStatus GetContext(out int context)
     {
       if ((CI.CallStatus & CallStatus.CIST_YIELDED) != 0)
       {
@@ -154,7 +154,7 @@ namespace UniLua
       }
     }
 
-    void ILuaAPI.Call(int numArgs, int numResults)
+    public void Call(int numArgs, int numResults)
     {
       // StkId func = Top - (numArgs + 1);
       // if( !D_PreCall( func, numResults ) )
@@ -165,7 +165,7 @@ namespace UniLua
       API.CallK(numArgs, numResults, 0, null);
     }
 
-    void ILuaAPI.CallK(int numArgs, int numResults,
+    public void CallK(int numArgs, int numResults,
       int context, CSharpFunctionDelegate continueFunc)
     {
       Utl.ApiCheck(continueFunc == null || !CI.IsLua,
@@ -221,12 +221,12 @@ namespace UniLua
       }
     }
 
-    ThreadStatus ILuaAPI.PCall(int numArgs, int numResults, int errFunc)
+    public ThreadStatus PCall(int numArgs, int numResults, int errFunc)
     {
       return API.PCallK(numArgs, numResults, errFunc, 0, null);
     }
 
-    ThreadStatus ILuaAPI.PCallK(int numArgs, int numResults, int errFunc,
+    public ThreadStatus PCallK(int numArgs, int numResults, int errFunc,
       int context, CSharpFunctionDelegate continueFunc)
     {
       Utl.ApiCheck(continueFunc == null || !CI.IsLua,
@@ -422,7 +422,7 @@ namespace UniLua
     }
     private static PFuncDelegate<ResumeParam> DG_Resume = ResumeWrap;
 
-    ThreadStatus ILuaAPI.Resume(ILuaState from, int numArgs)
+    public ThreadStatus Resume(ILuaState from, int numArgs)
     {
       LuaState fromState = from as LuaState;
       NumCSharpCalls = (fromState != null) ? fromState.NumCSharpCalls + 1 : 1;
@@ -465,12 +465,12 @@ namespace UniLua
       return status;
     }
 
-    int ILuaAPI.Yield(int numResults)
+    public int Yield(int numResults)
     {
       return API.YieldK(numResults, 0, null);
     }
 
-    int ILuaAPI.YieldK(int numResults,
+    public int YieldK(int numResults,
       int context, CSharpFunctionDelegate continueFunc)
     {
       CallInfo ci = CI;
@@ -504,19 +504,19 @@ namespace UniLua
     }
 
 
-    int ILuaAPI.AbsIndex(int index)
+    public int AbsIndex(int index)
     {
       return (index > 0 || index <= LuaDef.LUA_REGISTRYINDEX)
          ? index
          : Top.Index - CI.FuncIndex + index;
     }
 
-    int ILuaAPI.GetTop()
+    public int GetTop()
     {
       return Top.Index - (CI.FuncIndex + 1);
     }
 
-    void ILuaAPI.SetTop(int index)
+    public void SetTop(int index)
     {
       if (index >= 0)
       {
@@ -533,7 +533,7 @@ namespace UniLua
       }
     }
 
-    void ILuaAPI.Remove(int index)
+    public void Remove(int index)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -545,7 +545,7 @@ namespace UniLua
       Top = Stack[Top.Index - 1];
     }
 
-    void ILuaAPI.Insert(int index)
+    public void Insert(int index)
     {
       StkId p;
       if (!Index2Addr(index, out p))
@@ -569,14 +569,14 @@ namespace UniLua
       to.V.SetObj(ref fr.V);
     }
 
-    void ILuaAPI.Replace(int index)
+    public void Replace(int index)
     {
       Utl.ApiCheckNumElems(this, 1);
       MoveTo(Stack[Top.Index - 1], index);
       Top = Stack[Top.Index - 1];
     }
 
-    void ILuaAPI.Copy(int fromIndex, int toIndex)
+    public void Copy(int fromIndex, int toIndex)
     {
       StkId fr;
       if (!Index2Addr(fromIndex, out fr))
@@ -584,7 +584,7 @@ namespace UniLua
       MoveTo(fr, toIndex);
     }
 
-    void ILuaAPI.XMove(ILuaState to, int n)
+    public void XMove(ILuaState to, int n)
     {
       var toLua = to as LuaState;
       if ((LuaState)this == toLua)
@@ -615,7 +615,7 @@ namespace UniLua
     }
     private static PFuncDelegate<GrowStackParam> DG_GrowStack = GrowStackWrap;
 
-    bool ILuaAPI.CheckStack(int size)
+    public bool CheckStack(int size)
     {
       bool res = false;
 
@@ -642,14 +642,14 @@ namespace UniLua
       return res;
     }
 
-    int ILuaAPI.Error()
+    public int Error()
     {
       Utl.ApiCheckNumElems(this, 1);
       G_ErrorMsg();
       return 0;
     }
 
-    int ILuaAPI.UpvalueIndex(int i)
+    public int UpvalueIndex(int i)
     {
       return LuaDef.LUA_REGISTRYINDEX - i;
     }
@@ -682,7 +682,7 @@ namespace UniLua
       else return null;
     }
 
-    string ILuaAPI.GetUpvalue(int funcIndex, int n)
+    public string GetUpvalue(int funcIndex, int n)
     {
       StkId addr;
       if (!Index2Addr(funcIndex, out addr))
@@ -698,7 +698,7 @@ namespace UniLua
       return name;
     }
 
-    string ILuaAPI.SetUpvalue(int funcIndex, int n)
+    public string SetUpvalue(int funcIndex, int n)
     {
       StkId addr;
       if (!Index2Addr(funcIndex, out addr))
@@ -716,7 +716,7 @@ namespace UniLua
       return name;
     }
 
-    void ILuaAPI.CreateTable(int narray, int nrec)
+    public void CreateTable(int narray, int nrec)
     {
       var tbl = new LuaTable(this);
       Top.V.SetHValue(tbl);
@@ -725,12 +725,12 @@ namespace UniLua
       { tbl.Resize(narray, nrec); }
     }
 
-    void ILuaAPI.NewTable()
+    public void NewTable()
     {
       API.CreateTable(0, 0);
     }
 
-    bool ILuaAPI.Next(int index)
+    public bool Next(int index)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -753,7 +753,7 @@ namespace UniLua
       }
     }
 
-    void ILuaAPI.RawGetI(int index, int n)
+    public void RawGetI(int index, int n)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -766,7 +766,7 @@ namespace UniLua
       ApiIncrTop();
     }
 
-    // void ILuaAPI.DebugRawGetI( int index, int n )
+    // void DebugRawGetI( int index, int n )
     // {
     // 	StkId addr;
     // 	if( !Index2Addr( index, out addr ) )
@@ -784,7 +784,7 @@ namespace UniLua
     // 	ApiIncrTop();
     // }
 
-    string ILuaAPI.DebugGetInstructionHistory()
+    public string DebugGetInstructionHistory()
     {
 #if DEBUG_RECORD_INS
 			var sb = new System.Text.StringBuilder();
@@ -797,7 +797,7 @@ namespace UniLua
 #endif
     }
 
-    void ILuaAPI.RawGet(int index)
+    public void RawGet(int index)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -811,7 +811,7 @@ namespace UniLua
       below.V.SetObj(ref tbl.Get(ref below.V).V);
     }
 
-    void ILuaAPI.RawSetI(int index, int n)
+    public void RawSetI(int index, int n)
     {
       Utl.ApiCheckNumElems(this, 1);
       StkId addr;
@@ -823,7 +823,7 @@ namespace UniLua
       Top = Stack[Top.Index - 1];
     }
 
-    void ILuaAPI.RawSet(int index)
+    public void RawSet(int index)
     {
       Utl.ApiCheckNumElems(this, 2);
       StkId addr;
@@ -835,7 +835,7 @@ namespace UniLua
       Top = Stack[Top.Index - 2];
     }
 
-    void ILuaAPI.GetField(int index, string key)
+    public void GetField(int index, string key)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -847,7 +847,7 @@ namespace UniLua
       V_GetTable(addr, below, below);
     }
 
-    void ILuaAPI.SetField(int index, string key)
+    public void SetField(int index, string key)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -858,7 +858,7 @@ namespace UniLua
       Top = Stack[Top.Index - 2];
     }
 
-    void ILuaAPI.GetTable(int index)
+    public void GetTable(int index)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -868,7 +868,7 @@ namespace UniLua
       V_GetTable(addr, below, below);
     }
 
-    void ILuaAPI.SetTable(int index)
+    public void SetTable(int index)
     {
       StkId addr;
       Utl.ApiCheckNumElems(this, 2);
@@ -881,7 +881,7 @@ namespace UniLua
       Top = Stack[Top.Index - 2];
     }
 
-    void ILuaAPI.Concat(int n)
+    public void Concat(int n)
     {
       Utl.ApiCheckNumElems(this, n);
       if (n >= 2)
@@ -895,7 +895,7 @@ namespace UniLua
       }
     }
 
-    LuaType ILuaAPI.Type(int index)
+    public LuaType Type(int index)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -904,8 +904,7 @@ namespace UniLua
       return (LuaType)addr.V.Tt;
     }
 
-    internal static string TypeName(LuaType t)
-    {
+    public static string TypeNameSt(LuaType t) {
       switch (t)
       {
         case LuaType.LUA_TNIL:
@@ -949,9 +948,8 @@ namespace UniLua
       }
     }
 
-    string ILuaAPI.TypeName(LuaType t)
-    {
-      return TypeName(t);
+    public string TypeName(LuaType t) {
+      return TypeNameSt(t);
     }
 
     internal string ObjTypeName(ref TValue v)
@@ -966,40 +964,40 @@ namespace UniLua
       IncrTop();
     }
 
-    bool ILuaAPI.IsNil(int index)
+    public bool IsNil(int index)
     {
       return API.Type(index) == LuaType.LUA_TNIL;
     }
 
-    bool ILuaAPI.IsNone(int index)
+    public bool IsNone(int index)
     {
       return API.Type(index) == LuaType.LUA_TNONE;
     }
 
-    bool ILuaAPI.IsNoneOrNil(int index)
+    public bool IsNoneOrNil(int index)
     {
       LuaType t = API.Type(index);
       return t == LuaType.LUA_TNONE ||
         t == LuaType.LUA_TNIL;
     }
 
-    bool ILuaAPI.IsString(int index)
+    public bool IsString(int index)
     {
       LuaType t = API.Type(index);
       return (t == LuaType.LUA_TSTRING || t == LuaType.LUA_TNUMBER);
     }
 
-    bool ILuaAPI.IsTable(int index)
+    public bool IsTable(int index)
     {
       return API.Type(index) == LuaType.LUA_TTABLE;
     }
 
-    bool ILuaAPI.IsFunction(int index)
+    public bool IsFunction(int index)
     {
       return API.Type(index) == LuaType.LUA_TFUNCTION;
     }
 
-    bool ILuaAPI.Compare(int index1, int index2, LuaEq op)
+    public bool Compare(int index1, int index2, LuaEq op)
     {
       StkId addr1;
       if (!Index2Addr(index1, out addr1))
@@ -1018,7 +1016,7 @@ namespace UniLua
       }
     }
 
-    bool ILuaAPI.RawEqual(int index1, int index2)
+    public bool RawEqual(int index1, int index2)
     {
       StkId addr1;
       if (!Index2Addr(index1, out addr1))
@@ -1031,7 +1029,7 @@ namespace UniLua
       return V_RawEqualObj(ref addr1.V, ref addr2.V);
     }
 
-    int ILuaAPI.RawLen(int index)
+    public int RawLen(int index)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -1056,7 +1054,7 @@ namespace UniLua
       }
     }
 
-    void ILuaAPI.Len(int index)
+    public void Len(int index)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -1067,37 +1065,37 @@ namespace UniLua
       ApiIncrTop();
     }
 
-    void ILuaAPI.PushNil()
+    public void PushNil()
     {
       Top.V.SetNilValue();
       ApiIncrTop();
     }
 
-    void ILuaAPI.PushBoolean(bool b)
+    public void PushBoolean(bool b)
     {
       Top.V.SetBValue(b);
       ApiIncrTop();
     }
 
-    void ILuaAPI.PushNumber(double n)
+    public void PushNumber(double n)
     {
       Top.V.SetNValue(n);
       ApiIncrTop();
     }
 
-    void ILuaAPI.PushInteger(int n)
+    public void PushInteger(int n)
     {
       Top.V.SetNValue((double)n);
       ApiIncrTop();
     }
 
-    void ILuaAPI.PushUnsigned(uint n)
+    public void PushUnsigned(uint n)
     {
       Top.V.SetNValue((double)n);
       ApiIncrTop();
     }
 
-    string ILuaAPI.PushString(string s)
+    public string PushString(string s)
     {
       if (s == null)
       {
@@ -1112,12 +1110,12 @@ namespace UniLua
       }
     }
 
-    void ILuaAPI.PushCSharpFunction(CSharpFunctionDelegate f)
+    public void PushCSharpFunction(CSharpFunctionDelegate f)
     {
       API.PushCSharpClosure(f, 0);
     }
 
-    void ILuaAPI.PushCSharpClosure(CSharpFunctionDelegate f, int n)
+    public void PushCSharpClosure(CSharpFunctionDelegate f, int n)
     {
       if (n == 0)
       {
@@ -1140,7 +1138,7 @@ namespace UniLua
       ApiIncrTop();
     }
 
-    void ILuaAPI.PushValue(int index)
+    public void PushValue(int index)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -1150,36 +1148,36 @@ namespace UniLua
       ApiIncrTop();
     }
 
-    void ILuaAPI.PushGlobalTable()
+    public void PushGlobalTable()
     {
       API.RawGetI(LuaDef.LUA_REGISTRYINDEX, LuaDef.LUA_RIDX_GLOBALS);
     }
 
-    void ILuaAPI.PushLightUserData(object o)
+    public void PushLightUserData(object o)
     {
       Top.V.SetPValue(o);
       ApiIncrTop();
     }
 
-    void ILuaAPI.PushUInt64(UInt64 o)
+    public void PushUInt64(UInt64 o)
     {
       Top.V.SetUInt64Value(o);
       ApiIncrTop();
     }
 
-    bool ILuaAPI.PushThread()
+    public bool PushThread()
     {
       Top.V.SetThValue(this);
       ApiIncrTop();
       return G.MainThread == (LuaState)this;
     }
 
-    void ILuaAPI.Pop(int n)
+    public void Pop(int n)
     {
       API.SetTop(-n - 1);
     }
 
-    bool ILuaAPI.GetMetaTable(int index)
+    public bool GetMetaTable(int index)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -1216,7 +1214,7 @@ namespace UniLua
       }
     }
 
-    bool ILuaAPI.SetMetaTable(int index)
+    public bool SetMetaTable(int index)
     {
       Utl.ApiCheckNumElems(this, 1);
 
@@ -1258,14 +1256,14 @@ namespace UniLua
       return true;
     }
 
-    void ILuaAPI.GetGlobal(string name)
+    public void GetGlobal(string name)
     {
       var gt = G.Registry.V.HValue().GetInt(LuaDef.LUA_RIDX_GLOBALS);
       StkId.inc(ref Top).V.SetSValue(name);
       V_GetTable(gt, Stack[Top.Index - 1], Stack[Top.Index - 1]);
     }
 
-    void ILuaAPI.SetGlobal(string name)
+    public void SetGlobal(string name)
     {
       var gt = G.Registry.V.HValue().GetInt(LuaDef.LUA_RIDX_GLOBALS);
       StkId.inc(ref Top).V.SetSValue(name);
@@ -1273,7 +1271,7 @@ namespace UniLua
       Top = Stack[Top.Index - 2];
     }
 
-    string ILuaAPI.ToString(int index)
+    public string ToString(int index)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -1296,7 +1294,7 @@ namespace UniLua
       return addr.V.OValue as string;
     }
 
-    double ILuaAPI.ToNumberX(int index, out bool isnum)
+    public double ToNumberX(int index, out bool isnum)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -1325,13 +1323,13 @@ namespace UniLua
       return 0;
     }
 
-    double ILuaAPI.ToNumber(int index)
+    public double ToNumber(int index)
     {
       bool isnum;
       return API.ToNumberX(index, out isnum);
     }
 
-    int ILuaAPI.ToIntegerX(int index, out bool isnum)
+    public int ToIntegerX(int index, out bool isnum)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -1360,13 +1358,13 @@ namespace UniLua
       return 0;
     }
 
-    int ILuaAPI.ToInteger(int index)
+    public int ToInteger(int index)
     {
       bool isnum;
       return API.ToIntegerX(index, out isnum);
     }
 
-    uint ILuaAPI.ToUnsignedX(int index, out bool isnum)
+    public uint ToUnsignedX(int index, out bool isnum)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -1395,13 +1393,13 @@ namespace UniLua
       return 0;
     }
 
-    uint ILuaAPI.ToUnsigned(int index)
+    public uint ToUnsigned(int index)
     {
       bool isnum;
       return API.ToUnsignedX(index, out isnum);
     }
 
-    bool ILuaAPI.ToBoolean(int index)
+    public bool ToBoolean(int index)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -1410,7 +1408,7 @@ namespace UniLua
       return !IsFalse(ref addr.V);
     }
 
-    UInt64 ILuaAPI.ToUInt64X(int index, out bool isnum)
+    public UInt64 ToUInt64X(int index, out bool isnum)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -1429,13 +1427,13 @@ namespace UniLua
       return addr.V.UInt64Value;
     }
 
-    UInt64 ILuaAPI.ToUInt64(int index)
+    public UInt64 ToUInt64(int index)
     {
       bool isnum;
       return API.ToUInt64X(index, out isnum);
     }
 
-    object ILuaAPI.ToObject(int index)
+    public object ToObject(int index)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -1444,7 +1442,7 @@ namespace UniLua
       return addr.V.OValue;
     }
 
-    object ILuaAPI.ToUserData(int index)
+    public object ToUserData(int index)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -1460,7 +1458,7 @@ namespace UniLua
       }
     }
 
-    ILuaState ILuaAPI.ToThread(int index)
+    public ILuaState ToThread(int index)
     {
       StkId addr;
       if (!Index2Addr(index, out addr))
@@ -1468,7 +1466,7 @@ namespace UniLua
       return addr.V.TtIsThread() ? addr.V.OValue as ILuaState : null;
     }
 
-    private bool Index2Addr(int index, out StkId addr)
+    public bool Index2Addr(int index, out StkId addr)
     {
       CallInfo ci = CI;
       if (index > 0)

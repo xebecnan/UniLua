@@ -2,8 +2,8 @@
   public class StkId {
     public TValue V;
 
-    private StkId[] List;
-    public int Index { get; private set; }
+    public StkId[] List;
+    public int Index { get; set; }
 
     public void SetList(StkId[] list) {
       List = list;
@@ -28,7 +28,7 @@
         detail = "...";
       }
 
-      return string.Format("StkId - {0} - {1}", LuaState.TypeName((LuaType) V.Tt), detail);
+      return string.Format("StkId - {0} - {1}", LuaState.TypeNameSt((LuaType) V.Tt), detail);
     }
   }
 }

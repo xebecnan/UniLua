@@ -200,13 +200,13 @@ namespace UniLua
 				RecycleHNode(oldHashPart);
 		}
 
-		//-----------------------------------------
-		//
-		// **** PRIVATE below ****
-		//
-		//-----------------------------------------
+    //-----------------------------------------
+    //
+    // **** PRIVATE below ****
+    //
+    //-----------------------------------------
 
-		private class HNode
+	  public class HNode
 		{
 			public int Index;
 			public StkId Key;
@@ -223,14 +223,14 @@ namespace UniLua
 
 		private LuaState L;
 
-		private StkId[] ArrayPart;
-		private HNode[] HashPart;
-		private int LastFree;
+	  public StkId[] ArrayPart;
+		public HNode[] HashPart;
+	  public int LastFree;
 
-		private static StkId TheNilValue;
-		private static StkId[] DummyArrayPart;
-		private static HNode DummyNode;
-		private static HNode[] DummyHashPart;
+	  public static StkId TheNilValue;
+	  public static StkId[] DummyArrayPart;
+	  public static HNode DummyNode;
+	  public static HNode[] DummyHashPart;
 
 		private const int MAXBITS = 30;
 		private const int MAXASIZE = (1 << MAXBITS);
@@ -321,13 +321,13 @@ namespace UniLua
 			return (v.TtIsNumber() && v.NValue > 0 && (v.NValue % 1) == 0 && v.NValue <= int.MaxValue); //fix large number key bug
 		}
 
-		private HNode GetHashNode(int hashcode)
+		public HNode GetHashNode(int hashcode)
 		{
 			uint n = (uint)hashcode;
 			return HashPart[n % HashPart.Length];
 		}
 
-		private HNode GetHashNode(ref TValue v)
+		public HNode GetHashNode(ref TValue v)
 		{
 			if(IsPositiveInteger(ref v)) { return GetHashNode((int)v.NValue); }
 

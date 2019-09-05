@@ -76,7 +76,7 @@ namespace UniLua {
       return Stack[index];
     }
 
-    private void ApiIncrTop() {
+    public void ApiIncrTop() {
       StkId.inc(ref Top);
       // ULDebug.Log( "[ApiIncrTop] ==== Top.Index:" + Top.Index );
       // ULDebug.Log( "[ApiIncrTop] ==== CI.Top.Index:" + CI.Top.Index );
