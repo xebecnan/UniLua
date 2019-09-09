@@ -1,8 +1,82 @@
-﻿using UniLua;
+﻿using System;
+using System.Collections;
+using UniLua;
 using UnityEngine;
 
-public static class LuaTableExtensions
+public static class LuaTableExtension
 {
+  #region Set/Get methods
+  public static void Set(this LuaTable table, string name, bool value)
+  {
+    var key = new TValue { OValue = name, Tt = (int)LuaType.LUA_TSTRING };
+    var val = new TValue { OValue = value, Tt = (int)LuaType.LUA_TBOOLEAN };
+    table.Set(ref key, ref val);
+  }
+
+  public static void Set(this LuaTable table, string name, int value)
+  {
+    var key = new TValue { OValue = name, Tt = (int)LuaType.LUA_TSTRING };
+    var val = new TValue { OValue = value, Tt = (int)LuaType.LUA_TNUMBER };
+    table.Set(ref key, ref val);
+  }
+
+  public static void Set(this LuaTable table, string name, float value)
+  {
+    var key = new TValue { OValue = name, Tt = (int)LuaType.LUA_TSTRING };
+    var val = new TValue { NValue = value, Tt = (int)LuaType.LUA_TNUMBER };
+    table.Set(ref key, ref val);
+  }
+
+  public static void Set(this LuaTable table, string name, long value)
+  {
+    var key = new TValue { OValue = name, Tt = (int)LuaType.LUA_TSTRING };
+    var val = new TValue { NValue = value, Tt = (int)LuaType.LUA_TNUMBER };
+    table.Set(ref key, ref val);
+  }
+
+  public static void Set(this LuaTable table, string name, string value)
+  {
+    var key = new TValue { OValue = name, Tt = (int)LuaType.LUA_TSTRING };
+    var val = new TValue { OValue = value, Tt = (int)LuaType.LUA_TSTRING };
+    table.Set(ref key, ref val);
+  }
+
+  public static bool GetBool(this LuaTable table, string name)
+  {
+    var key = new TValue { OValue = name, Tt = (int)LuaType.LUA_TSTRING };
+    var stk = table.Get(ref key);
+    return (bool)stk.V.BValue();
+  }
+
+  public static int GetInt(this LuaTable table, string name)
+  {
+    var key = new TValue { OValue = name, Tt = (int)LuaType.LUA_TSTRING };
+    var stk = table.Get(ref key);
+    return (int)stk.V.NValue;
+  }
+
+  public static float GetFloat(this LuaTable table, string name)
+  {
+    var key = new TValue { OValue = name, Tt = (int)LuaType.LUA_TSTRING };
+    var stk = table.Get(ref key);
+    return (float)stk.V.NValue;
+  }
+
+  public static long GetLong(this LuaTable table, string name)
+  {
+    var key = new TValue { OValue = name, Tt = (int)LuaType.LUA_TSTRING };
+    var stk = table.Get(ref key);
+    return (long)stk.V.NValue;
+  }
+
+  public static string GetString(this LuaTable table, string name)
+  {
+    var key = new TValue { OValue = name, Tt = (int)LuaType.LUA_TSTRING };
+    var stk = table.Get(ref key);
+    return (string)stk.V.OValue;
+  }
+  #endregion
+
   public static StkId GetFunction(this LuaTable table, string name)
   {
     var h = name.GetHashCode();
@@ -25,20 +99,6 @@ public static class LuaTableExtensions
       if (node.Val.V.TtIsFunction()) return node.Val;
     }
     return LuaTable.TheNilValue;
-  }
-
-  public static float GetFloat(this LuaTable table, string name)
-  {
-    var key = new TValue { OValue = name, Tt = (int)LuaType.LUA_TSTRING };
-    var stk = table.Get(ref key);
-    return (float)stk.V.NValue;
-  }
-
-  public static void SetFloat(this LuaTable table, string name, float value)
-  {
-    var key = new TValue { OValue = name, Tt = (int)LuaType.LUA_TSTRING };
-    var val = new TValue { NValue = value, Tt = (int)LuaType.LUA_TNUMBER };
-    table.Set(ref key, ref val);
   }
 
   public static Vector3 GetVector3(this LuaTable table, string name)
@@ -74,7 +134,7 @@ public static class LuaTableExtensions
     return stk.V.HValue();
   }
 
-  public static void SetUnityObject(this LuaTable table, string name, Object value)
+  public static void SetUnityObject(this LuaTable table, string name, UnityEngine.Object value)
   {
     var key = new TValue { OValue = name, Tt = (int)LuaType.LUA_TSTRING };
     var val = new TValue { OValue = value, Tt = (int)LuaType.LUA_TLIGHTUSERDATA };
