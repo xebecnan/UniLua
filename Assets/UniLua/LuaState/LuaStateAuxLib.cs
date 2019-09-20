@@ -298,10 +298,9 @@ namespace UniLua {
       int fnameindex = API.GetTop() + 1;
       API.PushString("@" + filename);
       try {
-        using (var loadinfo = LuaFile.OpenFile(filename)) {
-          loadinfo.SkipComment();
-          status = API.Load(loadinfo, API.ToString(-1), mode);
-        }
+        var loadinfo = LuaFile.OpenFile(filename);
+        // loadinfo.SkipComment();
+        status = API.Load(loadinfo, API.ToString(-1), mode);
       }
       catch (LuaRuntimeException e) {
         API.PushString(string.Format("cannot open {0}: {1}",
