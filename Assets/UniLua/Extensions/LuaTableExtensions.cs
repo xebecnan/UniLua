@@ -77,15 +77,20 @@ public static class LuaTableExtension
   }
   #endregion
 
-  public static StkId GetFunction(this LuaTable table, string name)
-  {
-    var h = name.GetHashCode();
-    for (var node = table.GetHashNode(h); node != null; node = node.Next)
-    {
-      if (node.Val.V.TtIsFunction()) return node.Val;
+  public static StkId GetFunction(this LuaTable table, string name) {
+    var hParts = table.HashPart;
+    foreach (var hNode in hParts) {
+      if (hNode.Key.V.SValue() == name)
+        return hNode.Val;
     }
-
     return LuaTable.TheNilValue;
+
+    //var h = name.GetHashCode();
+    //for (var node = table.GetHashNode(h); node != null; node = node.Next)
+    //{
+    //  if (node.Val.V.TtIsFunction()) return node.Val;
+    //}
+    //return LuaTable.TheNilValue;
   }
 
   public static StkId GetFunction(this LuaTable table, int key)
