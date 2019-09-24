@@ -531,7 +531,7 @@ namespace UniLua {
       Resize(nasize, totaluse - na);
     }
 
-    private void DumpParts() {
+    public void DumpParts() {
       ULDebug.Log("------------------ [DumpParts] enter -----------------------");
       ULDebug.Log("<< Array Part >>");
       for (var i = 0; i < ArrayPart.Length; ++i) {

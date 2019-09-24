@@ -58,7 +58,7 @@ namespace UniLua
 			}
 		}
 
-		private void V_Execute()
+	    public void V_Execute()
 		{
 			ExecuteEnvironment env;
 			CallInfo ci = CI;

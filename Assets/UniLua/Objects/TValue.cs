@@ -59,47 +59,47 @@ namespace UniLua {
 		}
 #endif
 
-    internal bool TtIsNil() {
+    public bool TtIsNil() {
       return Tt == (int) LuaType.LUA_TNIL;
     }
 
-    internal bool TtIsBoolean() {
+    public bool TtIsBoolean() {
       return Tt == (int) LuaType.LUA_TBOOLEAN;
     }
 
-    internal bool TtIsNumber() {
+    public bool TtIsNumber() {
       return Tt == (int) LuaType.LUA_TNUMBER;
     }
 
-    internal bool TtIsUInt64() {
+    public bool TtIsUInt64() {
       return Tt == (int) LuaType.LUA_TUINT64;
     }
 
-    internal bool TtIsString() {
+    public bool TtIsString() {
       return Tt == (int) LuaType.LUA_TSTRING;
     }
 
-    internal bool TtIsTable() {
+    public bool TtIsTable() {
       return Tt == (int) LuaType.LUA_TTABLE;
     }
 
-    internal bool TtIsFunction() {
+    public bool TtIsFunction() {
       return Tt == (int) LuaType.LUA_TFUNCTION;
     }
 
-    internal bool TtIsThread() {
+    public bool TtIsThread() {
       return Tt == (int) LuaType.LUA_TTHREAD;
     }
 
-    internal bool ClIsLuaClosure() {
+    public bool ClIsLuaClosure() {
       return UInt64Value == CLOSURE_LUA;
     }
 
-    internal bool ClIsCsClosure() {
+    public bool ClIsCsClosure() {
       return UInt64Value == CLOSURE_CS;
     }
 
-    internal bool ClIsLcsClosure() {
+    public bool ClIsLcsClosure() {
       return UInt64Value == CLOSURE_LCS;
     }
 
