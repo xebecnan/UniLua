@@ -31,9 +31,14 @@ public static class LuaStateExtensions
   public static void PushFunctionFromTable(this LuaState lua, LuaTable tbl, string funcName)
   {
     var idx = tbl.GetFunction(funcName);
-    idx.Index = lua.Top.Index;
-    idx.SetList(lua.Stack);
-    lua.Stack[lua.Top.Index] = idx;
+    if (!idx.V.TtIsFunction()) throw new Exception($"Not found function {funcName} in table {tbl}");
+    lua.PushStkId(idx);
+  }
+
+  public static void PushStkId(this LuaState lua, StkId value) {
+    value.Index = lua.Top.Index;
+    value.SetList(lua.Stack);
+    lua.Stack[lua.Top.Index] = value;
     lua.ApiIncrTop();
   }
 
@@ -92,6 +97,51 @@ public static class LuaStateExtensions
     lua.Pop(1);
     table.UpdateAllGoInTable();
     return ret;
+  }
+
+  public static StkId GetFunction(this LuaState lua, LuaTable table, string name) {
+    try {
+      lua.PushFunctionFromTable(table, name);
+    } catch (Exception e) {
+      //Debug.LogWarning(e);
+      return null;
+    }
+    lua.PushTable(table);                               // self
+    var status = lua.PCall(1, 1, 0);                    // call
+    if (status != ThreadStatus.LUA_OK) {
+      Debug.LogWarning($"{lua.ToString(-1)}, status - {status}");
+      lua.Pop(1);
+      return null;
+    }
+    var func = lua.Last();
+    if (func.V.TtIsFunction()) {
+      return func;
+    }
+    Debug.LogWarning($"Expect function, get {((LuaType)func.V.Tt).ToString()}");
+    return null;
+  }
+
+  public static Tuple<StkId, StkId> CallFunction(this LuaState lua, StkId func) {
+    if (func.V.TtIsFunction()) {
+      var clone = StkId.Clone(func);
+      lua.PushStkId(clone);
+      if (!lua.D_PreCall(clone, 2)) {
+        lua.V_Execute();
+      }
+
+      var value = lua.Last();
+      if (value.V.TtIsNil()) {
+        // Debug.Log("Iterator elements are over");
+        return null;
+      }
+      lua.Pop(1);
+      var key = lua.Last();
+      lua.Pop(1);
+
+      return new Tuple<StkId, StkId>(key, value);
+    }
+    Debug.LogWarning("Iterator must be a function");
+    return null;
   }
 
   public static LuaTable CallFunction(this LuaState lua, int index, params object[] parameters)
