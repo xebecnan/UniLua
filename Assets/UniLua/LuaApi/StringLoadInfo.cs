@@ -1,5 +1,5 @@
 ﻿namespace UniLua {
-  class StringLoadInfo : ILoadInfo {
+  public class StringLoadInfo : ILoadInfo {
     public StringLoadInfo(string s) {
       Str = s;
       Pos = 0;

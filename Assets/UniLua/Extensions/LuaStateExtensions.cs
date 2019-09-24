@@ -1,8 +1,17 @@
-﻿using UniLua;
+﻿using System;
+using UniLua;
 using UnityEngine;
 
 public static class LuaStateExtensions
 {
+  public static int StoreFunction(this ILuaState state, string name)
+  {
+    state.GetField(-1, name);
+    if (!state.IsFunction(-1)) throw new Exception($"Function '{name}' not found");
+
+    return state.L_Ref(LuaDef.LUA_REGISTRYINDEX);
+  } // StoreFunction
+
   public static Vector3 GetVector(this LuaState lua)
   {
     var tbl = lua.Last().V.HValue();
@@ -85,7 +94,7 @@ public static class LuaStateExtensions
     return ret;
   }
 
-  public static LuaTable CallFunction(this LuaState lua, int index, object[] parameters)
+  public static LuaTable CallFunction(this LuaState lua, int index, params object[] parameters)
   {
     lua.RawGetI(LuaDef.LUA_REGISTRYINDEX, index);
     lua.PushParameters(parameters);
