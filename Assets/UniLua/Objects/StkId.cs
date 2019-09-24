@@ -34,14 +34,15 @@
     public static StkId Clone(StkId other)
     {
       if (other == null) return null;
-      var ret = new StkId();
-      ret.V = TValue.Clone(other.V);
-      ret.Index = other.Index;
+      var ret = new StkId {
+        V = TValue.Clone(other.V),
+        Index = other.Index
+      };
       if (other.List == null) ret.List = null;
       else
       {
         ret.List = new StkId[other.List.Length];
-        for (var i = 0; i < other.List.Length; i++) ret.List[i] = Clone(other.List[i]);
+        //for (var i = 0; i < other.List.Length; i++) ret.List[i] = Clone(other.List[i]);
       }
       return ret;
     }
