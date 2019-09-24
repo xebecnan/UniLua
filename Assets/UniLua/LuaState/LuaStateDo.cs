@@ -84,7 +84,7 @@ namespace UniLua {
     /// <summary>
     /// return true if function has been executed
     /// </summary>
-    private bool D_PreCall(StkId func, int nResults) {
+    public bool D_PreCall(StkId func, int nResults) {
       // prepare for Lua call
 
 #if DEBUG_D_PRE_CALL
