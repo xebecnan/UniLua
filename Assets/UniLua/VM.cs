@@ -324,8 +324,11 @@ newframe:
 					{
 						var rkb = env.RKB;
 						var rkc = env.RKC;
-						if(rkb.V.TtIsNumber() && rkc.V.TtIsNumber())
-							{ ra.V.SetNValue(rkb.V.NValue % rkc.V.NValue); }
+						if(rkb.V.TtIsNumber() && rkc.V.TtIsNumber()) {
+							var v1 = rkb.V.NValue;
+							var v2 = rkc.V.NValue;
+							ra.V.SetNValue(v1 - Math.Floor(v1/v2)*v2);
+						}
 						else
 							{ V_Arith(ra, rkb, rkc, TMS.TM_MOD); }
 						env.Base = ci.BaseIndex;

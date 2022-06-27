@@ -375,7 +375,7 @@ namespace UniLua
 				case LuaOp.LUA_OPSUB: return v1-v2;
 				case LuaOp.LUA_OPMUL: return v1*v2;
 				case LuaOp.LUA_OPDIV: return v1/v2;
-				case LuaOp.LUA_OPMOD: return v1%v2;
+				case LuaOp.LUA_OPMOD: return v1 - Math.Floor(v1/v2)*v2;
 				case LuaOp.LUA_OPPOW: return Math.Pow(v1, v2);
 				case LuaOp.LUA_OPUNM: return -v1;
 				default: throw new System.NotImplementedException();

@@ -275,7 +275,9 @@ namespace UniLua
 					e1.NumberValue = e1.NumberValue / e2.NumberValue;
 					break;
 				case OpCode.OP_MOD:
-					e1.NumberValue = e1.NumberValue % e2.NumberValue;
+					var v1 = e1.NumberValue;
+					var v2 = e2.NumberValue;
+					e1.NumberValue = v1 - Math.Floor(v1/v2) * v2;
 					break;
 				case OpCode.OP_POW:
 					e1.NumberValue = Math.Pow( e1.NumberValue, e2.NumberValue );
